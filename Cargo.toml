@@ -1,0 +1,15 @@
+[package]
+name = "rust_search"
+version = "0.1.0"
+description = "Blazingly fast file search library built in Rust"
+edition = "2021"
+authors = ["Parth Jadhav <jadhavparth99@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+regex = "1"
+ignore = "0.4"
+num_cpus = "1.0"
