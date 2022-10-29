@@ -1,6 +1,6 @@
 [package]
 name = "rust_search"
-version = "0.1.2"
+version = "0.1.3"
 description = "Blazingly fast file search library built in Rust"
 edition = "2021"
 authors = ["Parth Jadhav <jadhavparth99@gmail.com>"]
