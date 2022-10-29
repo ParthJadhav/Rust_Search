@@ -36,7 +36,7 @@ get_paths("/path/to/directory", SearchInput::None, FileType::Some(".fileExtensio
 To get all the files in a directory, use:
 
 ```rust
-get_paths("/path/to/directory", SearchInput::None, FileType::None), Depth::Some(1));
+get_paths("/path/to/directory", SearchInput::None, FileType::None, Depth::Some(1));
 ```
 
 ## Contributors
