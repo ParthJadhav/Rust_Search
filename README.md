@@ -4,11 +4,11 @@ Blazingly fast file search library built in Rust 🔥 [Work in progress]
 
 #### Usage
 
-Add `rust_search = "0.1.0"` in Cargo.toml.
+Add `rust_search = "0.1.2"` in Cargo.toml.
 
 ```toml
 [dependencies]
-rust_search = "0.1.0
+rust_search = "0.1.2
 ```
 
 Then, use it in your code:
