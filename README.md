@@ -1,6 +1,6 @@
 # Rust Search
 
-This is a simple file search engine written in Rust. It is a work in progress.
+Blazingly fast file search library built in Rust 🔥 [Work in progress]
 
 #### Usage
 
