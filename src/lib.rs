@@ -11,6 +11,9 @@ use std::{
 use ignore::{WalkBuilder, WalkState};
 use regex::Regex;
 
+/// A struct that holds the receiver for the search results
+///
+/// Can be iterated on to get the next element in the search results
 pub struct Paths {
     rx: mpsc::Receiver<String>,
 }
@@ -27,6 +30,7 @@ impl Iterator for Paths {
 }
 
 impl Paths {
+    /// Create a new instance of paths
     pub fn new(
         search_location: impl AsRef<Path>,
         search_input: Option<&str>,
