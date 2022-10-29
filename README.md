@@ -1,4 +1,4 @@
-# Rust Search
+![Group 1](https://user-images.githubusercontent.com/42001064/198829818-c4035432-8721-45e1-ba2d-4d2eb6d0c584.svg)
 
 Blazingly fast file search library built in Rust 🔥 [Work in progress]
 
