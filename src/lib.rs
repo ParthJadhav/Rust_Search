@@ -27,23 +27,18 @@ pub fn get_paths(
     walker.run(|| {
         let tx: Sender<String> = tx.clone();
         let reg_exp: Regex = regex_search_input.clone();
-        let exclude_directories: bool = false;
 
         Box::new(move |path_entry: Result<ignore::DirEntry, ignore::Error>| {
             if let Ok(entry) = path_entry {
-                if exclude_directories && !entry.path().is_file() {
-                    WalkState::Continue
-                } else {
-                    let path: String = entry.path().display().to_string();
+                let path: String = entry.path().display().to_string();
 
-                    if reg_exp.is_match(&path) {
-                        match tx.send(path) {
-                            Ok(_) => WalkState::Continue,
-                            Err(_) => WalkState::Quit,
-                        }
-                    } else {
-                        WalkState::Continue
+                if reg_exp.is_match(&path) {
+                    match tx.send(path) {
+                        Ok(_) => WalkState::Continue,
+                        Err(_) => WalkState::Quit,
                     }
+                } else {
+                    WalkState::Continue
                 }
             } else {
                 WalkState::Continue
