@@ -18,14 +18,14 @@ rust_search = "0.1.3
 Then, use it in your code:
 
 ```rust
-use rust_search::Paths;
+use rust_search::Search;
 
 fn main(){
     let depth = 1;
 
-    let paths = Paths::new("/path/to/directory", Some("fileName"), Some(".fileExtension"), Some(depth));
+    let search = Search::new("/path/to/directory", Some("fileName"), Some(".fileExtension"), Some(depth));
 
-    for path in paths {
+    for path in search {
         println!("{}", path);
     }
 }
@@ -34,17 +34,17 @@ fn main(){
 To get all the files with a specific extension in a directory, use:
 
 ```rust
-use rust_search::Paths;
+use rust_search::Search;
 
-Paths::new("/path/to/directory", None, Some(".fileExtension"), Some(1));
+Search::new("/path/to/directory", None, Some(".fileExtension"), Some(1));
 ```
 
 To get all the files in a directory, use:
 
 ```rust
-use rust_search::Paths;
+use rust_search::Search;
 
-Paths::new("/path/to/directory", None, None, Some(1));
+Search::new("/path/to/directory", None, None, Some(1));
 ```
 
 ## Contributors

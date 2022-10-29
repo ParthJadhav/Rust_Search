@@ -20,11 +20,11 @@ use regex::Regex;
 /// ## Iterate on the results
 ///
 /// ```
-/// use rust_search::Paths;
+/// use rust_search::Search;
 ///
-/// let paths = Paths::new("src", None, Some(".rs"), Some(1));
+/// let search = Search::new("src", None, Some(".rs"), Some(1));
 ///
-/// for path in paths {
+/// for path in search {
 ///    println!("{:?}", path);
 /// }
 /// ```
@@ -32,17 +32,17 @@ use regex::Regex;
 /// ## Collect results into a vector
 ///
 /// ```
-/// use rust_search::Paths;
+/// use rust_search::Search;
 ///
-/// let paths = Paths::new("src", None, Some(".rs"), Some(1));
+/// let search = Search::new("src", None, Some(".rs"), Some(1));
 ///
-/// let paths_vec: Vec<String> = paths.collect();
+/// let paths_vec: Vec<String> = search.collect();
 /// ```
-pub struct Paths {
+pub struct Search {
     rx: mpsc::Receiver<String>,
 }
 
-impl Iterator for Paths {
+impl Iterator for Search {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -53,8 +53,8 @@ impl Iterator for Paths {
     }
 }
 
-impl Paths {
-    /// Create a new instance of paths
+impl Search {
+    /// Create a new instance of the searcher
     pub fn new(
         search_location: impl AsRef<Path>,
         search_input: Option<&str>,
@@ -96,7 +96,7 @@ impl Paths {
     }
 }
 
-impl Default for Paths {
+impl Default for Search {
     /// Effectively just creates a [`WalkBuilder`] over the current diretory
     fn default() -> Self {
         Self::new(std::env::current_dir().unwrap(), None, None, None)
