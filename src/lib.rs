@@ -72,6 +72,13 @@ impl Paths {
     }
 }
 
+impl Default for Paths {
+    /// Effectively just creates a [`Walkbuilder`] over the current diretory
+    fn default() -> Self {
+        Self::new(std::env::current_dir().unwrap(), None, None, None)
+    }
+}
+
 fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>) -> Regex {
     let file_type = file_type.unwrap_or(".*");
     let search_input = search_input.unwrap_or(r"\w+\");
