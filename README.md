@@ -2,6 +2,8 @@
 
 Blazingly fast file search library built in Rust 🔥 [Work in progress]
 
+[![Version info](https://img.shields.io/crates/v/rust_search.svg)](https://crates.io/crates/rust_search)
+
 #### Usage
 
 Add `rust_search = "0.1.3"` in Cargo.toml.
