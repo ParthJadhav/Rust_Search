@@ -19,7 +19,7 @@ pub fn get_paths(
         .hidden(true)
         .git_ignore(true)
         .max_depth(depth)
-        .threads(threads())
+        .threads(cmp::min(12, num_cpus::get()))
         .build_parallel();
 
     let (tx, rx) = mpsc::channel::<String>();
@@ -60,13 +60,4 @@ fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>)
 
     let formatted_search_input = format!(r#"{}{}$"#, search_input, file_type);
     RegexBuilder::new(&formatted_search_input).build().unwrap()
-}
-
-fn threads() -> usize {
-    let threads = 0;
-    if threads == 0 {
-        cmp::min(12, num_cpus::get())
-    } else {
-        threads
-    }
 }
