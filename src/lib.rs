@@ -33,16 +33,14 @@ pub fn get_paths(
                 let path: String = entry.path().display().to_string();
 
                 if reg_exp.is_match(&path) {
-                    match tx.send(path) {
+                    return match tx.send(path) {
                         Ok(_) => WalkState::Continue,
                         Err(_) => WalkState::Quit,
-                    }
-                } else {
-                    WalkState::Continue
+                    };
                 }
-            } else {
-                WalkState::Continue
             }
+
+            WalkState::Continue
         })
     });
 
