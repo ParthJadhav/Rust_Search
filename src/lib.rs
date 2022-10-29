@@ -29,7 +29,7 @@ pub fn get_paths (search_location: &str, search_input: SearchInput, file_type: F
 
     let walker = WalkBuilder::new(search_location)
         .hidden(true)
-        .git_ignore(false)
+        .git_ignore(true)
         .max_depth(depth)
         .threads(threads())
         .build_parallel();
