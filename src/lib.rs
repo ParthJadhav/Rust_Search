@@ -7,33 +7,13 @@ use std::{
 use ignore::{WalkBuilder, WalkState};
 use regex::{Regex, RegexBuilder};
 
-pub enum Depth {
-    None,
-    Some(u8),
-}
-
-pub enum FileType<'a> {
-    None,
-    Some(&'a str),
-}
-
-pub enum SearchInput<'a> {
-    None,
-    Some(&'a str),
-}
-
 pub fn get_paths(
     search_location: impl AsRef<Path>,
-    search_input: SearchInput,
-    file_type: FileType,
-    depth: Depth,
+    search_input: Option<&str>,
+    file_type: Option<&str>,
+    depth: Option<usize>,
 ) -> std::sync::mpsc::Receiver<String> {
     let regex_search_input = build_regex_search_input(search_input, file_type);
-
-    let depth = match depth {
-        Depth::None => None,
-        Depth::Some(depth) => Some(depth as usize),
-    };
 
     let walker = WalkBuilder::new(search_location)
         .hidden(true)
@@ -78,16 +58,11 @@ fn is_match(reg_exp: &Regex, path: &str) -> bool {
     reg_exp.is_match(path)
 }
 
-fn build_regex_search_input(search_input: SearchInput, file_type: FileType) -> Regex {
-    let file_type = match file_type {
-        FileType::None => Some(".*"),
-        FileType::Some(file_type) => Some(file_type as &str),
-    };
-    let search_input = match search_input {
-        SearchInput::None => Some(r"\w+\"),
-        SearchInput::Some(search_input) => Some(search_input),
-    };
-    let formatted_search_input = format!(r#"{}{}$"#, search_input.unwrap(), file_type.unwrap());
+fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>) -> Regex {
+    let file_type = file_type.unwrap_or(".*");
+    let search_input = search_input.unwrap_or(r"\w+\");
+
+    let formatted_search_input = format!(r#"{}{}$"#, search_input, file_type);
     RegexBuilder::new(&formatted_search_input).build().unwrap()
 }
 
