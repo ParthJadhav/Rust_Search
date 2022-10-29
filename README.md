@@ -12,7 +12,7 @@ Add `rust_search = "0.1.4"` in Cargo.toml.
 
 ```toml
 [dependencies]
-rust_search = "0.1.4
+rust_search = "0.1.4"
 ```
 
 Then, use it in your code:
