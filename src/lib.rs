@@ -28,7 +28,7 @@ pub fn get_paths(
         let tx: Sender<String> = tx.clone();
         let reg_exp: Regex = regex_search_input.clone();
 
-        Box::new(move |path_entry: Result<ignore::DirEntry, ignore::Error>| {
+        Box::new(move |path_entry| {
             if let Ok(entry) = path_entry {
                 let path: String = entry.path().display().to_string();
 
