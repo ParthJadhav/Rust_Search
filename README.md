@@ -4,7 +4,8 @@ Blazingly fast file search library built in Rust 🔥 [Work in progress]
 
 [![Version info](https://img.shields.io/crates/v/rust_search.svg)](https://crates.io/crates/rust_search)
 
-#### Usage
+## Usage
+Please report any problems you encounter when using rust search here: [Issues](https://github.com/ParthJadhav/rust_search/issues)
 
 Add `rust_search = "0.1.3"` in Cargo.toml.
 
@@ -37,3 +38,10 @@ To get all the files in a directory, use:
 ```rust
 get_paths("/path/to/directory", SearchInput::None, FileType::None), Depth::Some(1));
 ```
+
+## Contributors
+Any contributions would be greatly valued as this library is still in its early stages.
+- Doccumentation
+- Benchmarks
+- Implementation guidlines
+- Code Improvement
