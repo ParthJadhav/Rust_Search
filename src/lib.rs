@@ -14,6 +14,30 @@ use regex::Regex;
 /// A struct that holds the receiver for the search results
 ///
 /// Can be iterated on to get the next element in the search results
+///
+/// # Examples
+///
+/// ## Iterate on the results
+///
+/// ```
+/// use rust_search::Paths;
+///
+/// let paths = Paths::new("src", None, Some(".rs"), Some(1));
+///
+/// for path in paths {
+///    println!("{:?}", path);
+/// }
+/// ```
+///
+/// ## Collect results into a vector
+///
+/// ```
+/// use rust_search::Paths;
+///
+/// let paths = Paths::new("src", None, Some(".rs"), Some(1));
+///
+/// let paths_vec: Vec<_> = paths.collect();
+/// ```
 pub struct Paths {
     rx: mpsc::Receiver<String>,
 }
