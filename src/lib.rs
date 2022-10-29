@@ -11,44 +11,61 @@ use std::{
 use ignore::{WalkBuilder, WalkState};
 use regex::Regex;
 
-pub fn get_paths(
-    search_location: impl AsRef<Path>,
-    search_input: Option<&str>,
-    file_type: Option<&str>,
-    depth: Option<usize>,
-) -> std::sync::mpsc::Receiver<String> {
-    let regex_search_input = build_regex_search_input(search_input, file_type);
+pub struct Paths {
+    rx: mpsc::Receiver<String>,
+}
 
-    let walker = WalkBuilder::new(search_location)
-        .hidden(true)
-        .git_ignore(true)
-        .max_depth(depth)
-        .threads(cmp::min(12, num_cpus::get()))
-        .build_parallel();
+impl Iterator for Paths {
+    type Item = String;
 
-    let (tx, rx) = mpsc::channel::<String>();
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.rx.recv() {
+            Ok(v) => Some(v),
+            Err(_) => None,
+        }
+    }
+}
 
-    walker.run(|| {
-        let tx: Sender<String> = tx.clone();
-        let reg_exp: Regex = regex_search_input.clone();
+impl Paths {
+    pub fn new(
+        search_location: impl AsRef<Path>,
+        search_input: Option<&str>,
+        file_type: Option<&str>,
+        depth: Option<usize>,
+    ) -> Self {
+        let regex_search_input = build_regex_search_input(search_input, file_type);
 
-        Box::new(move |path_entry| {
-            if let Ok(entry) = path_entry {
-                let path: String = entry.path().display().to_string();
+        let walker = WalkBuilder::new(search_location)
+            .hidden(true)
+            .git_ignore(true)
+            .max_depth(depth)
+            .threads(cmp::min(12, num_cpus::get()))
+            .build_parallel();
 
-                if reg_exp.is_match(&path) {
-                    return match tx.send(path) {
-                        Ok(_) => WalkState::Continue,
-                        Err(_) => WalkState::Quit,
-                    };
+        let (tx, rx) = mpsc::channel::<String>();
+
+        walker.run(|| {
+            let tx: Sender<String> = tx.clone();
+            let reg_exp: Regex = regex_search_input.clone();
+
+            Box::new(move |path_entry| {
+                if let Ok(entry) = path_entry {
+                    let path: String = entry.path().display().to_string();
+
+                    if reg_exp.is_match(&path) {
+                        return match tx.send(path) {
+                            Ok(_) => WalkState::Continue,
+                            Err(_) => WalkState::Quit,
+                        };
+                    }
                 }
-            }
 
-            WalkState::Continue
-        })
-    });
+                WalkState::Continue
+            })
+        });
 
-    rx
+        Self { rx }
+    }
 }
 
 fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>) -> Regex {
