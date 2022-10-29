@@ -1,11 +1,13 @@
+use std::{
+    cmp,
+    path::Path,
+    sync::mpsc::{self, Sender},
+};
+
 extern crate ignore;
 extern crate regex;
 use ignore::{WalkBuilder, WalkState};
 use regex::{Regex, RegexBuilder};
-use std::{
-    cmp,
-    sync::mpsc::{self, Sender},
-};
 
 pub enum Depth {
     None,
@@ -23,7 +25,7 @@ pub enum SearchInput<'a> {
 }
 
 pub fn get_paths(
-    search_location: &str,
+    search_location: impl AsRef<Path>,
     search_input: SearchInput,
     file_type: FileType,
     depth: Depth,
