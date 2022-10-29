@@ -5,6 +5,7 @@ Blazingly fast file search library built in Rust 🔥 [Work in progress]
 [![Version info](https://img.shields.io/crates/v/rust_search.svg)](https://crates.io/crates/rust_search)
 
 ## Usage
+
 Please report any problems you encounter when using rust search here: [Issues](https://github.com/ParthJadhav/rust_search/issues)
 
 Add `rust_search = "0.1.3"` in Cargo.toml.
@@ -17,11 +18,14 @@ rust_search = "0.1.3
 Then, use it in your code:
 
 ```rust
-use rust_search::{get_paths, Depth, FileType, SearchInput};
+use rust_search::Search;
 
 fn main(){
-    let paths = get_paths("/path/to/directory", SearchInput::Some("fileName"), FileType::Some(".fileExtension"), Depth::Some(depthOfFoldersToSearch));
-    for path in paths {
+    let depth = 1;
+
+    let search = Search::new("/path/to/directory", Some("fileName"), Some(".fileExtension"), Some(depth));
+
+    for path in search {
         println!("{}", path);
     }
 }
@@ -30,17 +34,23 @@ fn main(){
 To get all the files with a specific extension in a directory, use:
 
 ```rust
-get_paths("/path/to/directory", SearchInput::None, FileType::Some(".fileExtension"), Depth::Some(1));
+use rust_search::Search;
+
+Search::new("/path/to/directory", None, Some(".fileExtension"), Some(1));
 ```
 
 To get all the files in a directory, use:
 
 ```rust
-get_paths("/path/to/directory", SearchInput::None, FileType::None, Depth::Some(1));
+use rust_search::Search;
+
+Search::new("/path/to/directory", None, None, Some(1));
 ```
 
 ## Contributors
+
 Any contributions would be greatly valued as this library is still in its early stages.
+
 - Doccumentation
 - Benchmarks
 - Implementation guidlines
