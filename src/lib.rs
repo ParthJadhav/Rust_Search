@@ -36,7 +36,7 @@ use regex::Regex;
 ///
 /// let paths = Paths::new("src", None, Some(".rs"), Some(1));
 ///
-/// let paths_vec: Vec<_> = paths.collect();
+/// let paths_vec: Vec<String> = paths.collect();
 /// ```
 pub struct Paths {
     rx: mpsc::Receiver<String>,
