@@ -8,11 +8,11 @@ Blazingly fast file search library built in Rust 🔥 [Work in progress]
 
 Please report any problems you encounter when using rust search here: [Issues](https://github.com/ParthJadhav/rust_search/issues)
 
-Add `rust_search = "0.1.3"` in Cargo.toml.
+Add `rust_search = "0.1.4"` in Cargo.toml.
 
 ```toml
 [dependencies]
-rust_search = "0.1.3
+rust_search = "0.1.4
 ```
 
 Then, use it in your code:
