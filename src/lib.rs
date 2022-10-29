@@ -36,7 +36,7 @@ pub fn get_paths(
                 } else {
                     let path: String = entry.path().display().to_string();
 
-                    if is_match(&reg_exp, &path) {
+                    if reg_exp.is_match(&path) {
                         match tx.send(path) {
                             Ok(_) => WalkState::Continue,
                             Err(_) => WalkState::Quit,
@@ -52,10 +52,6 @@ pub fn get_paths(
     });
 
     rx
-}
-
-fn is_match(reg_exp: &Regex, path: &str) -> bool {
-    reg_exp.is_match(path)
 }
 
 fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>) -> Regex {
