@@ -4,8 +4,6 @@ use std::{
     sync::mpsc::{self, Sender},
 };
 
-extern crate ignore;
-extern crate regex;
 use ignore::{WalkBuilder, WalkState};
 use regex::{Regex, RegexBuilder};
 
