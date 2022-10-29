@@ -1,8 +1,11 @@
 extern crate ignore;
 extern crate regex;
-use std::{cmp, sync::mpsc::{self, Sender}};
 use ignore::{WalkBuilder, WalkState};
 use regex::{Regex, RegexBuilder};
+use std::{
+    cmp,
+    sync::mpsc::{self, Sender},
+};
 
 pub enum Depth {
     None,
@@ -19,9 +22,14 @@ pub enum SearchInput<'a> {
     Some(&'a str),
 }
 
-pub fn get_paths (search_location: &str, search_input: SearchInput, file_type: FileType, depth: Depth) -> std::sync::mpsc::Receiver<String>{
+pub fn get_paths(
+    search_location: &str,
+    search_input: SearchInput,
+    file_type: FileType,
+    depth: Depth,
+) -> std::sync::mpsc::Receiver<String> {
     let regex_search_input = build_regex_search_input(search_input, file_type);
-    
+
     let depth = match depth {
         Depth::None => None,
         Depth::Some(depth) => Some(depth as usize),
@@ -33,7 +41,6 @@ pub fn get_paths (search_location: &str, search_input: SearchInput, file_type: F
         .max_depth(depth)
         .threads(threads())
         .build_parallel();
-
 
     let (tx, rx) = mpsc::channel::<String>();
 
@@ -63,7 +70,8 @@ pub fn get_paths (search_location: &str, search_input: SearchInput, file_type: F
             }
         })
     });
-    return rx;
+
+    rx
 }
 
 fn is_match(reg_exp: &Regex, path: &str) -> bool {
@@ -73,16 +81,14 @@ fn is_match(reg_exp: &Regex, path: &str) -> bool {
 fn build_regex_search_input(search_input: SearchInput, file_type: FileType) -> Regex {
     let file_type = match file_type {
         FileType::None => Some(".*"),
-        FileType::Some(file_type) => Some(file_type as &str)
+        FileType::Some(file_type) => Some(file_type as &str),
     };
     let search_input = match search_input {
         SearchInput::None => Some(r"\w+\"),
         SearchInput::Some(search_input) => Some(search_input),
     };
-    let formatted_search_input = format!(r#"{}{}$"#, search_input.unwrap(), file_type.unwrap()).to_string();
-    RegexBuilder::new(&formatted_search_input)
-        .build()
-        .unwrap()
+    let formatted_search_input = format!(r#"{}{}$"#, search_input.unwrap(), file_type.unwrap());
+    RegexBuilder::new(&formatted_search_input).build().unwrap()
 }
 
 fn threads() -> usize {
