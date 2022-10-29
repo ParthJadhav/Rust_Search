@@ -97,7 +97,7 @@ impl Paths {
 }
 
 impl Default for Paths {
-    /// Effectively just creates a [`Walkbuilder`] over the current diretory
+    /// Effectively just creates a [`WalkBuilder`] over the current diretory
     fn default() -> Self {
         Self::new(std::env::current_dir().unwrap(), None, None, None)
     }
