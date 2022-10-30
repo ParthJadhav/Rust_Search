@@ -51,14 +51,19 @@ impl Iterator for Search {
 }
 
 impl Search {
-    /// Create a new instance of the searcher
+    /// Search for files in a given arguments
+    /// ### Arguments
+    /// * `search_location` - The location to search in
+    /// * `search_input` - The search input, defaults to any word
+    /// * `file_ext` - The file extension to search for, defaults to any file extension
+    /// * `depth` - The depth to search to, defaults to no limit
     pub fn new(
         search_location: impl AsRef<Path>,
         search_input: Option<&str>,
-        file_type: Option<&str>,
+        file_ext: Option<&str>,
         depth: Option<usize>,
     ) -> Self {
-        let regex_search_input = utils::build_regex_search_input(search_input, file_type);
+        let regex_search_input = utils::build_regex_search_input(search_input, file_ext);
 
         let walker = WalkBuilder::new(search_location)
             .hidden(true)
