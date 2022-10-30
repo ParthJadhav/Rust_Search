@@ -4,7 +4,7 @@ use std::{
     sync::mpsc::{self, Sender},
 };
 
-use crate::utils;
+use crate::{utils, SearchBuilder};
 use ignore::{WalkBuilder, WalkState};
 use regex::Regex;
 
@@ -101,6 +101,6 @@ impl Search {
 impl Default for Search {
     /// Effectively just creates a [`WalkBuilder`] over the current diretory
     fn default() -> Self {
-        Self::new(std::env::current_dir().unwrap(), None, None, None)
+        SearchBuilder::default().build()
     }
 }
