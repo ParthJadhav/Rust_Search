@@ -23,7 +23,7 @@ use rust_search::Search;
 fn main(){
     let depth = 1;
 
-    let search = Search::new("/path/to/directory", Some("fileName"), Some(".fileExtension"), Some(depth));
+    let search = Search::new("/path/to/directory", Some("fileName"), Some(".fileExtension"), Some(depth), None);
 
     for path in search {
         println!("{}", path);
@@ -36,7 +36,7 @@ To get all the files with a specific extension in a directory, use:
 ```rust
 use rust_search::Search;
 
-Search::new("/path/to/directory", None, Some(".fileExtension"), Some(1));
+Search::new("/path/to/directory", None, Some(".fileExtension"), Some(1), None);
 ```
 
 To get all the files in a directory, use:
@@ -44,7 +44,15 @@ To get all the files in a directory, use:
 ```rust
 use rust_search::Search;
 
-Search::new("/path/to/directory", None, None, Some(1));
+Search::new("/path/to/directory", None, None, Some(1), None);
+```
+
+rust_search uses fuzzy text search by default. Add Some(true) to use strict input search.
+
+```rust
+use rust_search::Search;
+
+Search::new("/path/to/directory", None, None, Some(1), Some(true));
 ```
 
 ### Discord Server

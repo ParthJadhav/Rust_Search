@@ -22,7 +22,7 @@ use regex::Regex;
 /// ```
 /// use rust_search::Search;
 ///
-/// let search = Search::new("src", None, Some(".rs"), Some(1));
+/// let search = Search::new("src", None, Some(".rs"), Some(1), None);
 ///
 /// for path in search {
 ///    println!("{:?}", path);
@@ -34,7 +34,7 @@ use regex::Regex;
 /// ```
 /// use rust_search::Search;
 ///
-/// let search = Search::new("src", None, Some(".rs"), Some(1));
+/// let search = Search::new("src", None, Some(".rs"), Some(1), None);
 ///
 /// let paths_vec: Vec<String> = search.collect();
 /// ```
