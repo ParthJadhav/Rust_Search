@@ -57,6 +57,10 @@ impl Search {
     /// * `search_input` - The search input, defaults to any word
     /// * `file_ext` - The file extension to search for, defaults to any file extension
     /// * `depth` - The depth to search to, defaults to no limit
+    #[deprecated(
+        since = "1.0.0",
+        note = "Please use the `SearchBuilder` to build a `Search` instance"
+    )]
     pub fn new(
         search_location: impl AsRef<Path>,
         search_input: Option<&str>,

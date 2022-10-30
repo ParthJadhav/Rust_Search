@@ -16,6 +16,7 @@ pub struct SearchBuilder {
 
 impl SearchBuilder {
     /// Build a new [`Search`] instance
+    #[allow(deprecated)]
     pub fn build(&self) -> Search {
         Search::new(
             &self.search_location,
