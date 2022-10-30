@@ -60,8 +60,9 @@ impl Search {
         search_input: Option<&str>,
         file_type: Option<&str>,
         depth: Option<usize>,
+        strict: Option<bool>,
     ) -> Self {
-        let regex_search_input = build_regex_search_input(search_input, file_type);
+        let regex_search_input = build_regex_search_input(search_input, file_type, strict);
 
         let walker = WalkBuilder::new(search_location)
             .hidden(true)
@@ -99,14 +100,20 @@ impl Search {
 impl Default for Search {
     /// Effectively just creates a [`WalkBuilder`] over the current diretory
     fn default() -> Self {
-        Self::new(std::env::current_dir().unwrap(), None, None, None)
+        Self::new(std::env::current_dir().unwrap(), None, None, None, None)
     }
 }
 
-fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>) -> Regex {
+fn build_regex_search_input(search_input: Option<&str>, file_type: Option<&str>, strict: Option<bool>) -> Regex {
     let file_type = file_type.unwrap_or(".*");
     let search_input = search_input.unwrap_or(r"\w+\");
-
-    let formatted_search_input = format!(r#"{}{}$"#, search_input, file_type);
-    Regex::new(&formatted_search_input).unwrap()
+    let is_strict = strict.unwrap_or(false);
+    const FUZZY_SEARCH: &str = r".*\";
+    let formatted_search_input;
+    if is_strict == true {
+        formatted_search_input = format!(r#"{}{}$"#, search_input, file_type); 
+    } else {
+        formatted_search_input = format!(r#"{}{}{}$"#, search_input, FUZZY_SEARCH, file_type); 
+    }
+    return Regex::new(&formatted_search_input).unwrap();
 }
