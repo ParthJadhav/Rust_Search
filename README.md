@@ -47,6 +47,20 @@ use rust_search::Search;
 Search::new("/path/to/directory", None, None, Some(1));
 ```
 
+### Benchmark
+
+The benchmark was done on a directorys containing 5928 files.
+
+| Library/Tool | Mean (ms) | Min (ms) | Max (ms)|
+| --- | --- | --- | --- | 
+| [fd] | 8.9 | 6.7 | 12.2 |
+| Rust Search | 9.5 | 7.8 | 12.1 |
+| [Glob] | 1140 | 1118 | 1154 |
+
+
+[Glob]: https://www.npmjs.com/package/glob
+[fd]: https://crates.io/crates/fd-find
+
 ### Discord Server
 ## 🔵 Discord server & Linkedin
 
