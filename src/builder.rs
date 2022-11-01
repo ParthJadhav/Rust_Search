@@ -2,20 +2,20 @@ use std::path::{Path, PathBuf};
 
 use crate::Search;
 
-/// Builder for a [`Search`] instance, allowing for more complex searches
+/// Builder for a [`Search`] instance, allowing for more complex searches.
 pub struct SearchBuilder {
-    /// The location to search in, defaults to the current directory
+    /// The location to search in, defaults to the current directory.
     search_location: PathBuf,
-    /// The search input, defaults to any word
+    /// The search input, defaults to search for every word.
     search_input: Option<String>,
-    /// The file extension to search for, defaults to any file extension
+    /// The file extension to search for, defaults to any file extension.
     file_ext: Option<String>,
-    /// The depth to search to, defaults to no limit
+    /// The depth to search to, defaults to no limit.
     depth: Option<usize>,
 }
 
 impl SearchBuilder {
-    /// Build a new [`Search`] instance
+    /// Build a new [`Search`] instance.
     #[allow(deprecated)]
     pub fn build(&self) -> Search {
         Search::new(
@@ -26,9 +26,9 @@ impl SearchBuilder {
         )
     }
 
-    /// Set the search location to search in
+    /// Set the search location to search in.
     /// ### Arguments
-    /// * `location` - The location to search in
+    /// * `location` - The location to search in.
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
@@ -40,9 +40,9 @@ impl SearchBuilder {
         self
     }
 
-    /// Set the search input
+    /// Set the search input.
     /// ### Arguments
-    /// * `input` - The search input
+    /// * `input` - The search input.
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
@@ -54,9 +54,9 @@ impl SearchBuilder {
         self
     }
 
-    /// Set the file extension to search for
+    /// Set the file extension to search for.
     /// ### Arguments
-    /// * `ext` - The file extension to search for
+    /// * `ext` - The file extension to search for.
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
@@ -68,9 +68,9 @@ impl SearchBuilder {
         self
     }
 
-    /// Set the depth to search to
+    /// Set the depth to search to.
     /// ### Arguments
-    /// * `depth` - The depth to search to
+    /// * `depth` - The depth to search to.
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
