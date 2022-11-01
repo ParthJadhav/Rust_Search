@@ -41,11 +41,12 @@ To get all the files with a specific extension in a directory, use:
 ```rust
 use rust_search::SearchBuilder;
 
-let _ = SearchBuilder::default()
+let files: Vec<String> = SearchBuilder::default()
     .location("/path/to/directory")
     .ext("file_extension")
     .depth(1)
-    .build();
+    .build()
+    .collect();
 ```
 
 To get all the files in a directory, use:
@@ -53,10 +54,11 @@ To get all the files in a directory, use:
 ```rust
 use rust_search::SearchBuilder;
 
-let _ = SearchBuilder::default()
+let files: Vec<String> = SearchBuilder::default()
     .location("/path/to/directory")
     .depth(1)
-    .build();
+    .build()
+    .collect();
 ```
 
 ## Contribute
