@@ -25,7 +25,7 @@ use rust_search::SearchBuilder;
 fn main(){
     let search = SearchBuilder::default()
     .location("/path/to/directory")
-    .input("file_name")
+    .search_input("file_name")
     .ext("file_extension")
     .depth(1)
     .build();

@@ -47,9 +47,9 @@ impl SearchBuilder {
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
-    /// let search: Vec<String> = SearchBuilder::default().input("Search").build().collect();
+    /// let search: Vec<String> = SearchBuilder::default().search_input("Search").build().collect();
     /// ```
-    pub fn input(mut self, input: impl Into<String>) -> Self {
+    pub fn search_input(mut self, input: impl Into<String>) -> Self {
         self.search_input = Some(input.into());
         self
     }
