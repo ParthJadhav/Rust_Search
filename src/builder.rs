@@ -6,6 +6,8 @@ use crate::Search;
 pub struct SearchBuilder {
     /// The location to search in, defaults to the current directory.
     search_location: PathBuf,
+    /// Vector of additional locations to search in.
+    more_locations: Option<Vec<PathBuf>>,
     /// The search input, defaults to search for every word.
     search_input: Option<String>,
     /// The file extension to search for, defaults to any file extension.
@@ -26,6 +28,7 @@ impl SearchBuilder {
     pub fn build(&self) -> Search {
         Search::new(
             &self.search_location,
+            self.more_locations.clone(),
             self.search_input.as_deref(),
             self.file_ext.as_deref(),
             self.depth,
@@ -155,12 +158,30 @@ impl SearchBuilder {
         self.hidden = Some(hidden);
         self
     }
+
+    /// Add extra locations to search in.
+    /// ### Arguments
+    /// * `more_locations` - Vec<> of locations to search in.
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .more_locations(vec!["/Users/username/b/", "/Users/username/c/"])
+    /// .build()
+    /// .collect();
+    /// ```
+    pub fn more_locations(mut self, more_locations: Vec<impl AsRef<Path>>) -> Self {
+        self.more_locations = Some(more_locations.into_iter().map(|x| x.as_ref().to_path_buf()).collect());
+        self
+    }
 }
 
 impl Default for SearchBuilder {
     fn default() -> Self {
         Self {
             search_location: std::env::current_dir().expect("Failed to get current directory"),
+            more_locations: None,
             search_input: None,
             file_ext: None,
             depth: None,

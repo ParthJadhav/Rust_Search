@@ -63,6 +63,7 @@ impl Search {
     )]
     pub fn new(
         search_location: impl AsRef<Path>,
+        more_locations: Option<Vec<impl AsRef<Path>>>,
         search_input: Option<&str>,
         file_ext: Option<&str>,
         depth: Option<usize>,
@@ -72,16 +73,22 @@ impl Search {
     ) -> Self {
         let regex_search_input = utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
 
-        let walker = WalkBuilder::new(search_location)
-            .hidden(!hidden.unwrap_or(true))
+        let mut walker = WalkBuilder::new(search_location);
+
+        walker.hidden(!hidden.unwrap_or(true))
             .git_ignore(true)
             .max_depth(depth)
-            .threads(cmp::min(12, num_cpus::get()))
-            .build_parallel();
+            .threads(cmp::min(12, num_cpus::get()));
+
+        if more_locations.is_some() {
+            for location in more_locations.unwrap() {
+                walker.add(location);
+            }
+        }
 
         let (tx, rx) = mpsc::channel::<String>();
-
-        walker.run(|| {
+        walker.build_parallel()
+        .run(|| {
             let tx: Sender<String> = tx.clone();
             let reg_exp: Regex = regex_search_input.clone();
 
@@ -106,7 +113,7 @@ impl Search {
 }
 
 impl Default for Search {
-    /// Effectively just creates a [`WalkBuilder`] over the current diretory
+    /// Effectively just creates a [`WalkBuilder`] over the current directory
     fn default() -> Self {
         SearchBuilder::default().build()
     }
