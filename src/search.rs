@@ -64,9 +64,9 @@ impl Search {
         search_input: Option<&str>,
         file_ext: Option<&str>,
         depth: Option<usize>,
-        strict: Option<bool>,
-        ignore_case: Option<bool>,
-        hidden: Option<bool>,
+        strict: bool,
+        ignore_case: bool,
+        with_hidden: bool,
     ) -> Self {
         let regex_search_input =
             utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
@@ -74,7 +74,7 @@ impl Search {
         let mut walker = WalkBuilder::new(search_location);
 
         walker
-            .hidden(!hidden.unwrap_or(true))
+            .hidden(!with_hidden)
             .git_ignore(true)
             .max_depth(depth)
             .threads(cmp::min(12, num_cpus::get()));
