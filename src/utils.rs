@@ -11,9 +11,9 @@ pub(crate) fn build_regex_search_input(
     const FUZZY_SEARCH: &str = r".*\";
     let mut formatted_search_input;
     if strict.unwrap_or(false) == true {
-        formatted_search_input = format!(r#"{}{}$"#, search_input, file_type); 
+        formatted_search_input = format!(r#"{}{}$"#, search_input, file_type);
     } else {
-        formatted_search_input = format!(r#"{}{}{}$"#, search_input, FUZZY_SEARCH, file_type); 
+        formatted_search_input = format!(r#"{}{}{}$"#, search_input, FUZZY_SEARCH, file_type);
     }
     if ignore_case.unwrap_or(true) == true {
         formatted_search_input = set_case_insensitive(&formatted_search_input);

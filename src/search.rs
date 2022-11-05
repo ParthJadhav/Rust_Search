@@ -71,11 +71,13 @@ impl Search {
         ignore_case: Option<bool>,
         hidden: Option<bool>,
     ) -> Self {
-        let regex_search_input = utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
+        let regex_search_input =
+            utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
 
         let mut walker = WalkBuilder::new(search_location);
 
-        walker.hidden(!hidden.unwrap_or(true))
+        walker
+            .hidden(!hidden.unwrap_or(true))
             .git_ignore(true)
             .max_depth(depth)
             .threads(cmp::min(12, num_cpus::get()));
@@ -87,8 +89,7 @@ impl Search {
         }
 
         let (tx, rx) = mpsc::channel::<String>();
-        walker.build_parallel()
-        .run(|| {
+        walker.build_parallel().run(|| {
             let tx: Sender<String> = tx.clone();
             let reg_exp: Regex = regex_search_input.clone();
 

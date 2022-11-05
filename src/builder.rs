@@ -172,7 +172,12 @@ impl SearchBuilder {
     /// .collect();
     /// ```
     pub fn more_locations(mut self, more_locations: Vec<impl AsRef<Path>>) -> Self {
-        self.more_locations = Some(more_locations.into_iter().map(|x| x.as_ref().to_path_buf()).collect());
+        self.more_locations = Some(
+            more_locations
+                .into_iter()
+                .map(|x| x.as_ref().to_path_buf())
+                .collect(),
+        );
         self
     }
 }
