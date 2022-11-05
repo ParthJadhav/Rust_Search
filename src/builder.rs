@@ -14,7 +14,7 @@ pub struct SearchBuilder {
     file_ext: Option<String>,
     /// The depth to search to, defaults to no limit.
     depth: Option<usize>,
-    /// When set to true, Searches for exact match
+    /// When set to true, Searches for exact match, defaults to false.
     strict: bool,
     /// Set search option to be case insensitive, defaults to false.
     ignore_case: bool,
