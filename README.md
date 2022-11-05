@@ -103,14 +103,6 @@ The benchmark was done on a directories containing 45K files.
 
 + Rust_Search** is 1.09 times faster than FD.
 ```
-
-## 🔵 Discord server & Linkedin
-
-Click the button below to join the discord server or Linkedin
-
-<a href="https://discord.gg/hqDPyNb9m3" target="_blank"><img src="https://user-images.githubusercontent.com/42001064/126635148-9a736436-5a6d-4298-8d8e-acda11aec74c.png" alt="Join Discord Server" width="180px" ></a>
-<a href="https://www.linkedin.com/in/parthjadhav04" target="_blank"><img src="https://img.shields.io/badge/Linkedin-blue?style=flat-square&logo=linkedin" alt="Connect on Linkedin" width="180px" height="58"></a>
-
 ## 👨‍💻 Contributors
 
 Any contributions would be greatly valued as this library is still in its early stages.
