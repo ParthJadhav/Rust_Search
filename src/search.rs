@@ -67,8 +67,9 @@ impl Search {
         file_ext: Option<&str>,
         depth: Option<usize>,
         strict: Option<bool>,
+        ignore_case: Option<bool>,
     ) -> Self {
-        let regex_search_input = utils::build_regex_search_input(search_input, file_ext, strict);
+        let regex_search_input = utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
 
         let walker = WalkBuilder::new(search_location)
             .hidden(true)

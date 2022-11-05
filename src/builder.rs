@@ -14,6 +14,8 @@ pub struct SearchBuilder {
     depth: Option<usize>,
     /// When set to true, Searches for exact match
     strict: Option<bool>,
+    /// Set search option to be case sensitive, defaults to false.
+    ignore_case: Option<bool>,
 }
 
 impl SearchBuilder {
@@ -26,6 +28,7 @@ impl SearchBuilder {
             self.file_ext.as_deref(),
             self.depth,
             self.strict,
+            self.ignore_case,
         )
     }
 
@@ -114,6 +117,24 @@ impl SearchBuilder {
         self.strict = Some(strict);
         self
     }
+
+    /// Set search option to be case sensitive.
+    /// ### Arguments
+    /// * `ignore_case` - True or False
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .search_input("name")
+    /// .ignore_case(true)
+    /// .build()
+    /// .collect();
+    /// ```
+    pub fn ignore_case(mut self, ignore_case: bool) -> Self {
+        self.ignore_case = Some(ignore_case);
+        self
+    }
 }
 
 impl Default for SearchBuilder {
@@ -124,6 +145,7 @@ impl Default for SearchBuilder {
             file_ext: None,
             depth: None,
             strict: Some(false),
+            ignore_case: Some(false),
         }
     }
 }
