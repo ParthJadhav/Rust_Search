@@ -15,11 +15,11 @@ pub struct SearchBuilder {
     /// The depth to search to, defaults to no limit.
     depth: Option<usize>,
     /// When set to true, Searches for exact match
-    strict: Option<bool>,
-    /// Set search option to be case sensitive, defaults to false.
-    ignore_case: Option<bool>,
+    strict: bool,
+    /// Set search option to be case insensitive, defaults to false.
+    ignore_case: bool,
     /// Search for hidden files, defaults to false.
-    hidden: Option<bool>,
+    hidden: bool,
 }
 
 impl SearchBuilder {
@@ -106,56 +106,50 @@ impl SearchBuilder {
         self
     }
 
-    /// Searches for exact match, when set to true. Won't show any effect if search_input is not set.
-    /// ### Arguments
-    /// * `strict` - True or False
+    /// Searches for exact match
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
     /// let search: Vec<String> = SearchBuilder::default()
     /// .search_input("name")
-    /// .strict(true)
+    /// .strict()
     /// .build()
     /// .collect();
     /// ```
-    pub fn strict(mut self, strict: bool) -> Self {
-        self.strict = Some(strict);
+    pub fn strict(mut self) -> Self {
+        self.strict = true;
         self
     }
 
-    /// Set search option to be case sensitive.
-    /// ### Arguments
-    /// * `ignore_case` - True or False
+    /// Set search option to be case insensitive.
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
     /// let search: Vec<String> = SearchBuilder::default()
     /// .search_input("name")
-    /// .ignore_case(true)
+    /// .ignore_case()
     /// .build()
     /// .collect();
     /// ```
-    pub fn ignore_case(mut self, ignore_case: bool) -> Self {
-        self.ignore_case = Some(ignore_case);
+    pub fn ignore_case(mut self) -> Self {
+        self.ignore_case = true;
         self
     }
 
-    /// Searches for hidden files if set to true. Defaults to false.
-    /// ### Arguments
-    /// * `hidden` - True or False
+    /// Searches for hidden files
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
     /// let search: Vec<String> = SearchBuilder::default()
-    /// .hidden(true)
+    /// .with_hidden()
     /// .build()
     /// .collect();
     /// ```
-    pub fn hidden(mut self, hidden: bool) -> Self {
-        self.hidden = Some(hidden);
+    pub fn hidden(mut self) -> Self {
+        self.hidden = true;
         self
     }
 
@@ -190,10 +184,9 @@ impl Default for SearchBuilder {
             search_input: None,
             file_ext: None,
             depth: None,
-            strict: Some(false),
-            ignore_case: Some(false),
-            // setting hidden to true will ignore the hidden files and folders
-            hidden: Some(true),
+            strict: false,
+            ignore_case: false,
+            hidden: false,
         }
     }
 }
