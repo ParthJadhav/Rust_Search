@@ -82,8 +82,8 @@ impl Search {
             .max_depth(depth)
             .threads(cmp::min(12, num_cpus::get()));
 
-        if more_locations.is_some() {
-            for location in more_locations.unwrap() {
+        if let Some(locations) = more_locations {
+            for location in locations {
                 walker.add(location);
             }
         }
