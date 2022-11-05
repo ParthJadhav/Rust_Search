@@ -12,6 +12,8 @@ pub struct SearchBuilder {
     file_ext: Option<String>,
     /// The depth to search to, defaults to no limit.
     depth: Option<usize>,
+    /// When set to true, Searches for exact match
+    strict: Option<bool>,
 }
 
 impl SearchBuilder {
@@ -23,6 +25,7 @@ impl SearchBuilder {
             self.search_input.as_deref(),
             self.file_ext.as_deref(),
             self.depth,
+            self.strict,
         )
     }
 
@@ -33,7 +36,10 @@ impl SearchBuilder {
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
-    /// let search: Vec<String> = SearchBuilder::default().location("src").build().collect();
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .location("src")
+    /// .build()
+    /// .collect();
     /// ```
     pub fn location(mut self, location: impl AsRef<Path>) -> Self {
         self.search_location = location.as_ref().to_path_buf();
@@ -47,7 +53,10 @@ impl SearchBuilder {
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
-    /// let search: Vec<String> = SearchBuilder::default().search_input("Search").build().collect();
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .search_input("Search")
+    /// .build()
+    /// .collect();
     /// ```
     pub fn search_input(mut self, input: impl Into<String>) -> Self {
         self.search_input = Some(input.into());
@@ -61,7 +70,10 @@ impl SearchBuilder {
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
-    /// let search: Vec<String> = SearchBuilder::default().ext(".rs").build().collect();
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .ext(".rs")
+    /// .build()
+    /// .collect();
     /// ```
     pub fn ext(mut self, ext: impl Into<String>) -> Self {
         self.file_ext = Some(ext.into());
@@ -75,10 +87,31 @@ impl SearchBuilder {
     /// ```rust
     /// use rust_search::SearchBuilder;
     ///
-    /// let search: Vec<String> = SearchBuilder::default().depth(1).build().collect();
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .depth(1)
+    /// .build()
+    /// .collect();
     /// ```
     pub fn depth(mut self, depth: usize) -> Self {
         self.depth = Some(depth);
+        self
+    }
+
+    /// Searches for exact match, when set to true. Won't show any effect if search_input is not set.
+    /// ### Arguments
+    /// * `strict` - True or False
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .search_input("name")
+    /// .strict(true)
+    /// .build()
+    /// .collect();
+    /// ```
+    pub fn strict(mut self, strict: bool) -> Self {
+        self.strict = Some(strict);
         self
     }
 }
@@ -90,6 +123,7 @@ impl Default for SearchBuilder {
             search_input: None,
             file_ext: None,
             depth: None,
+            strict: Some(false),
         }
     }
 }
