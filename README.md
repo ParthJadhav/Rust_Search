@@ -23,12 +23,17 @@ Genral use
 use rust_search::SearchBuilder;
 
 fn main(){
-    let search = SearchBuilder::default()
-    .location("/path/to/directory")
-    .search_input("file_name")
-    .ext("file_extension")
-    .depth(1)
-    .build();
+    let search: Vec<String> = SearchBuilder::default()
+        .location("/path/to/search")
+        .search_input("what to search")
+        .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
+        .ext(".extension")
+        .strict(false)
+        .depth(1)
+        .ignore_case(true)
+        .hidden(false)
+        .build()
+        .collect();
 
     for path in search {
         println!("{}", path);
@@ -44,7 +49,6 @@ use rust_search::SearchBuilder;
 let files: Vec<String> = SearchBuilder::default()
     .location("/path/to/directory")
     .ext("file_extension")
-    .depth(1)
     .build()
     .collect();
 ```
@@ -60,6 +64,8 @@ let files: Vec<String> = SearchBuilder::default()
     .build()
     .collect();
 ```
+
+👉 For more examples, please refer to the [Documentation](https://docs.rs/rust_search/latest/rust_search/)
 
 ## Contribute
 Any contributions would be greatly valued as this library is still in its early stages. Things you can contribute to:
