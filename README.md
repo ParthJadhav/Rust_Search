@@ -15,15 +15,25 @@ Add `rust_search = "0.1.4"` in Cargo.toml.
 rust_search = "0.1.4"
 ```
 
-Then, use it in your code:
+## Examples
+
+Genral use
 
 ```rust
-use rust_search::Search;
+use rust_search::SearchBuilder;
 
 fn main(){
-    let depth = 1;
-
-    let search = Search::new("/path/to/directory", Some("fileName"), Some(".fileExtension"), Some(depth));
+    let search: Vec<String> = SearchBuilder::default()
+        .location("/path/to/search")
+        .search_input("what to search")
+        .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
+        .ext(".extension")
+        .strict()
+        .depth(1)
+        .ignore_case()
+        .hidden()
+        .build()
+        .collect();
 
     for path in search {
         println!("{}", path);
@@ -34,25 +44,38 @@ fn main(){
 To get all the files with a specific extension in a directory, use:
 
 ```rust
-use rust_search::Search;
+use rust_search::SearchBuilder;
 
-Search::new("/path/to/directory", None, Some(".fileExtension"), Some(1));
+let files: Vec<String> = SearchBuilder::default()
+    .location("/path/to/directory")
+    .ext("file_extension")
+    .build()
+    .collect();
 ```
 
 To get all the files in a directory, use:
 
 ```rust
-use rust_search::Search;
+use rust_search::SearchBuilder;
 
-Search::new("/path/to/directory", None, None, Some(1));
+let files: Vec<String> = SearchBuilder::default()
+    .location("/path/to/directory")
+    .depth(1)
+    .build()
+    .collect();
 ```
 
+👉 For more examples, please refer to the [Documentation](https://docs.rs/rust_search/latest/rust_search/)
+
 ## ⚙️ Benchmarks
+
 The difference in sample size is due to the fact that fd and glob are different tools and have different use cases. fd is a command line tool that searches for files and directories. glob is a library that can be used to search for files and directories. The benchmark is done on a MacBook Air M2, 16 GB Unified memory.
 
 Benchmarks are done using [hyperfine](https://github.com/sharkdp/hyperfine),
 Benchmarks files are available in the [benchmarks](https://drive.google.com/drive/folders/1ug6ojNixS5jAe6Lh6M0o2d3tku73zQ9w?usp=sharing) drive folder.
+
 ### - Rust vs Glob
+
 The benchmark was done on a directories containing 300K files.
 
 | Command / Library | Mean [s] | Min [s] | Max [s] | Relative |
@@ -61,7 +84,9 @@ The benchmark was done on a directories containing 300K files.
 | `glob` | 22.728 ± 0.023 | 22.690 | 22.746 | 17.25 ± 0.03 |
 
 ---
+
 ### - Rust vs FD
+
 The benchmark was done on a directories containing 45K files.
 
 | Command / Library | Mean [ms] | Min [ms] | Max [ms] | Relative |
@@ -72,6 +97,7 @@ The benchmark was done on a directories containing 45K files.
 ---
 
 ### Results:-
+
 ```diff
 + Rust_Search is 17.25 times faster than Glob.
 
@@ -80,7 +106,7 @@ The benchmark was done on a directories containing 45K files.
 
 ## 🔵 Discord server & Linkedin
 
-Click the button below to join the discord server or Linkedin 
+Click the button below to join the discord server or Linkedin
 
 <a href="https://discord.gg/hqDPyNb9m3" target="_blank"><img src="https://user-images.githubusercontent.com/42001064/126635148-9a736436-5a6d-4298-8d8e-acda11aec74c.png" alt="Join Discord Server" width="180px" ></a>
 <a href="https://www.linkedin.com/in/parthjadhav04" target="_blank"><img src="https://img.shields.io/badge/Linkedin-blue?style=flat-square&logo=linkedin" alt="Connect on Linkedin" width="180px" height="58"></a>
@@ -93,3 +119,25 @@ Any contributions would be greatly valued as this library is still in its early 
 - Benchmarks
 - Implementation guidlines
 - Code Improvement
+
+If you want to contribute to this project, please follow the steps below:
+
+1. Fork the project
+2. Clone the forked repository
+3. Create a feature branch
+4. Make changes to the code
+5. Commit the changes
+6. Push the changes to the forked repository
+7. Create a pull request
+8. Wait for the pull request to be reviewed and merged (if approved)
+
+## License
+
+This project is licensed under the terms of the MIT license.
+
+## Discord server & Linkedin
+
+Click the button below to join the discord server or Linkedin
+
+<a href="https://discord.gg/hqDPyNb9m3" target="_blank"><img src="https://user-images.githubusercontent.com/42001064/126635148-9a736436-5a6d-4298-8d8e-acda11aec74c.png" alt="Join Discord Server" width="180px" ></a>
+<a href="https://www.linkedin.com/in/parthjadhav04" target="_blank"><img src="https://img.shields.io/badge/Linkedin-blue?style=flat-square&logo=linkedin" alt="Connect on Linkedin" width="180px" height="58"></a>
