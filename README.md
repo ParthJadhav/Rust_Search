@@ -28,10 +28,10 @@ fn main(){
         .search_input("what to search")
         .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
         .ext(".extension")
-        .strict(false)
+        .strict()
         .depth(1)
-        .ignore_case(true)
-        .hidden(false)
+        .ignore_case()
+        .hidden()
         .build()
         .collect();
 
