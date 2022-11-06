@@ -16,3 +16,4 @@ categories = ["filesystem", "algorithms"]
 regex = "1"
 ignore = "0.4"
 num_cpus = "1.0"
+dirs = "4.0.0"
