@@ -27,7 +27,7 @@ fn main(){
         .location("/path/to/search")
         .search_input("what to search")
         .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
-        .ext(".extension")
+        .ext("extension")
         .strict()
         .depth(1)
         .ignore_case()
