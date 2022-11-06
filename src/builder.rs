@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::Search;
+use crate::{utils::replace_tilde_with_home_dir, Search};
 
 /// Builder for a [`Search`] instance, allowing for more complex searches.
 pub struct SearchBuilder {
@@ -51,7 +51,7 @@ impl SearchBuilder {
     /// .collect();
     /// ```
     pub fn location(mut self, location: impl AsRef<Path>) -> Self {
-        self.search_location = location.as_ref().to_path_buf();
+        self.search_location = replace_tilde_with_home_dir(location);
         self
     }
 
@@ -169,7 +169,7 @@ impl SearchBuilder {
         self.more_locations = Some(
             more_locations
                 .into_iter()
-                .map(|x| x.as_ref().to_path_buf())
+                .map(replace_tilde_with_home_dir)
                 .collect(),
         );
         self
