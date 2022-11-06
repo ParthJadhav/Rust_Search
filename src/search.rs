@@ -57,6 +57,9 @@ impl Search {
     /// * `search_input` - The search input, defaults to any word
     /// * `file_ext` - The file extension to search for, defaults to any file extension
     /// * `depth` - The depth to search to, defaults to no limit
+    /// * `strict` - Whether to search for the exact word or not
+    /// * `ignore_case` - Whether to ignore case or not
+    /// * `hidden` - Whether to search hidden files or not, files starting with a dot
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         search_location: impl AsRef<Path>,
