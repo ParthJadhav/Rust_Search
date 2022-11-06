@@ -58,7 +58,7 @@ impl Search {
     /// * `file_ext` - The file extension to search for, defaults to any file extension
     /// * `depth` - The depth to search to, defaults to no limit
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub(crate) fn new(
         search_location: impl AsRef<Path>,
         more_locations: Option<Vec<impl AsRef<Path>>>,
         search_input: Option<&str>,
