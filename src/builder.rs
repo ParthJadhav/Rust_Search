@@ -39,6 +39,8 @@ impl SearchBuilder {
     }
 
     /// Set the search location to search in.
+    /// ## Notes
+    /// - Will replace `~` with [home directory](https://en.wikipedia.org/wiki/Home_directory)
     /// ### Arguments
     /// * `location` - The location to search in.
     /// ### Examples
@@ -154,6 +156,8 @@ impl SearchBuilder {
     }
 
     /// Add extra locations to search in.
+    /// ## Notes
+    /// - Will replace `~` with [home directory](https://en.wikipedia.org/wiki/Home_directory)
     /// ### Arguments
     /// * `more_locations` - Vec<> of locations to search in.
     /// ### Examples
