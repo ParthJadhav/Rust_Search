@@ -142,7 +142,7 @@ impl SearchBuilder {
         self
     }
 
-    /// Searches for hidden files, meaning files that start with a dot.
+    /// Searches for hidden files.
     /// ### Examples
     /// ```rust
     /// use rust_search::SearchBuilder;
