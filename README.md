@@ -1,8 +1,14 @@
+<div align="center">
+
 ![Group 1](https://user-images.githubusercontent.com/42001064/198829818-c4035432-8721-45e1-ba2d-4d2eb6d0c584.svg)
 
-Blazingly fast file search library built in Rust 🔥
+Blazingly fast file search crate built in Rust 🔥
 
 [![Version info](https://img.shields.io/crates/v/rust_search.svg)](https://crates.io/crates/rust_search)
+[![Documentation](https://docs.rs/rust_search/badge.svg)](https://docs.rs/rust_search)
+[![License](https://img.shields.io/crates/l/rust_search.svg)](https://github.com/parthjadhav/rust_search/blob/master/LICENSE-MIT)
+
+</div>
 
 ## 📦 Usage
 
@@ -74,7 +80,7 @@ The difference in sample size is due to the fact that fd and glob are different 
 Benchmarks are done using [hyperfine](https://github.com/sharkdp/hyperfine),
 Benchmarks files are available in the [benchmarks](https://drive.google.com/drive/folders/1ug6ojNixS5jAe6Lh6M0o2d3tku73zQ9w?usp=sharing) drive folder.
 
-### - Rust vs Glob
+### - Rust Search vs Glob
 
 The benchmark was done on a directories containing 300K files.
 
@@ -85,7 +91,7 @@ The benchmark was done on a directories containing 300K files.
 
 ---
 
-### - Rust vs FD
+### - Rust Search vs FD
 
 The benchmark was done on a directories containing 45K files.
 
@@ -99,9 +105,9 @@ The benchmark was done on a directories containing 45K files.
 ### Results:-
 
 ```diff
-+ Rust_Search is 17.25 times faster than Glob.
++ rust_search is 17.25 times faster than Glob.
 
-+ Rust_Search** is 1.09 times faster than FD.
++ rust_search** is 1.09 times faster than FD.
 ```
 ## 👨‍💻 Contributors
 
