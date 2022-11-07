@@ -14,6 +14,8 @@ pub struct SearchBuilder {
     file_ext: Option<String>,
     /// The depth to search to, defaults to no limit.
     depth: Option<usize>,
+    /// The limit of results to return, defaults to no limit.
+    limit: Option<usize>,
     /// When set to true, Searches for exact match, defaults to false.
     strict: bool,
     /// Set search option to be case insensitive, defaults to false.
@@ -32,6 +34,7 @@ impl SearchBuilder {
             self.search_input.as_deref(),
             self.file_ext.as_deref(),
             self.depth,
+            self.limit,
             self.strict,
             self.ignore_case,
             self.hidden,
@@ -107,6 +110,23 @@ impl SearchBuilder {
     /// ```
     pub fn depth(mut self, depth: usize) -> Self {
         self.depth = Some(depth);
+        self
+    }
+
+    /// Set the limit of results to return. This will limit the amount of results returned.
+    /// ### Arguments
+    /// * `limit` - The limit of results to return.
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .limit(5)
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.limit = Some(limit);
         self
     }
 
@@ -195,6 +215,7 @@ impl Default for SearchBuilder {
             search_input: None,
             file_ext: None,
             depth: None,
+            limit: None,
             strict: false,
             ignore_case: false,
             hidden: false,
