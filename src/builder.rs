@@ -25,7 +25,7 @@ pub struct SearchBuilder {
 impl SearchBuilder {
     /// Build a new [`Search`] instance.
     #[allow(deprecated)]
-    pub fn build(&self) -> Search {
+    pub fn build(&self) -> Search<Box<dyn Iterator<Item = String>>> {
         Search::new(
             &self.search_location,
             self.more_locations.clone(),

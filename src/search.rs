@@ -35,22 +35,19 @@ use regex::Regex;
 ///
 /// let paths_vec: Vec<String> = search.collect();
 /// ```
-pub struct Search {
-    rx: mpsc::Receiver<String>,
+pub struct Search<T: Iterator<Item = String>> {
+    rx: T,
 }
 
-impl Iterator for Search {
+impl<T: Iterator<Item = String>> Iterator for Search<T> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.rx.recv() {
-            Ok(v) => Some(v),
-            Err(_) => None,
-        }
+        self.rx.next()
     }
 }
 
-impl Search {
+impl Search<Box<dyn Iterator<Item = String>>> {
     /// Search for files in a given arguments
     /// ### Arguments
     /// * `search_location` - The location to search in
@@ -109,11 +106,13 @@ impl Search {
             })
         });
 
-        Self { rx }
+        Self {
+            rx: Box::new(rx.into_iter()),
+        }
     }
 }
 
-impl Default for Search {
+impl Default for Search<Box<dyn Iterator<Item = String>>> {
     /// Effectively just creates a [`WalkBuilder`] over the current directory
     fn default() -> Self {
         SearchBuilder::default().build()
