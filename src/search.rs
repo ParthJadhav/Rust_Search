@@ -67,6 +67,7 @@ impl Search {
         strict: bool,
         ignore_case: bool,
         with_hidden: bool,
+        limit: Option<u128>,
     ) -> Self {
         let regex_search_input =
             utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
@@ -95,6 +96,9 @@ impl Search {
                     let path: String = entry.path().display().to_string();
 
                     if reg_exp.is_match(&path) {
+                        // could make use of a count variable to keep track of results
+                        // Call WalkState::Quit when count exceeds limit
+                        // WalkState::Quit is Async so it will not stop the search immediately, which might result in more results than the limit
                         return match tx.send(path) {
                             Ok(_) => WalkState::Continue,
                             Err(_) => WalkState::Quit,

@@ -20,6 +20,8 @@ pub struct SearchBuilder {
     ignore_case: bool,
     /// Search for hidden files, defaults to false.
     hidden: bool,
+    /// Limit search results to given number, defaults to no limit.
+    limit: Option<u128>,
 }
 
 impl SearchBuilder {
@@ -35,6 +37,7 @@ impl SearchBuilder {
             self.strict,
             self.ignore_case,
             self.hidden,
+            self.limit,
         )
     }
 
@@ -174,6 +177,21 @@ impl SearchBuilder {
         );
         self
     }
+
+     /// Limit search results to given number.
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    /// .limit(1)
+    /// .build()
+    /// .collect();
+    /// ```
+    pub fn limit(mut self, limit: Option<u128>) -> Self {
+        self.limit = limit;
+        self
+    }
 }
 
 impl Default for SearchBuilder {
@@ -187,6 +205,7 @@ impl Default for SearchBuilder {
             strict: false,
             ignore_case: false,
             hidden: false,
+            limit: None,
         }
     }
 }
