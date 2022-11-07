@@ -30,10 +30,10 @@ use rust_search::SearchBuilder;
 
 fn main(){
     let search: Vec<String> = SearchBuilder::default()
-        .location("/path/to/search")
+        .location("~/path/to/directory")
         .search_input("what to search")
         .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
-        .ext(".extension")
+        .ext("extension")
         .strict()
         .depth(1)
         .ignore_case()

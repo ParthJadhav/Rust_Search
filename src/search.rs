@@ -61,7 +61,7 @@ impl Search {
     /// * `ignore_case` - Whether to ignore case or not
     /// * `hidden` - Whether to search hidden files or not, files starting with a dot
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub(crate) fn new(
         search_location: impl AsRef<Path>,
         more_locations: Option<Vec<impl AsRef<Path>>>,
         search_input: Option<&str>,
