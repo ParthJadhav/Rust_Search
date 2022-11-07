@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use regex::Regex;
 
 pub(crate) fn build_regex_search_input(
@@ -23,4 +25,18 @@ pub(crate) fn build_regex_search_input(
 
 fn set_case_insensitive(formatted_search_input: &str) -> String {
     "(?i)".to_owned() + formatted_search_input
+}
+
+/// Replace the tilde with the home directory, if it exists
+/// ### Arguments
+/// * `path` - The path to replace the tilde with the home directory
+pub(crate) fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
+    let path = path.as_ref();
+    if path.starts_with("~") {
+        if let Some(home_dir) = dirs::home_dir() {
+            // Remove the tilde from the path and append it to the home directory
+            return home_dir.join(path.strip_prefix("~").unwrap());
+        }
+    }
+    path.to_path_buf()
 }
