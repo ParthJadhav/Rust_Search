@@ -35,11 +35,11 @@ use regex::Regex;
 ///
 /// let paths_vec: Vec<String> = search.collect();
 /// ```
-pub struct Search<T: Iterator<Item = String>> {
-    rx: T,
+pub struct Search {
+    rx: Box<dyn Iterator<Item = String>>,
 }
 
-impl<T: Iterator<Item = String>> Iterator for Search<T> {
+impl Iterator for Search {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -47,7 +47,7 @@ impl<T: Iterator<Item = String>> Iterator for Search<T> {
     }
 }
 
-impl Search<Box<dyn Iterator<Item = String>>> {
+impl Search {
     /// Search for files in a given arguments
     /// ### Arguments
     /// * `search_location` - The location to search in
@@ -130,7 +130,7 @@ impl Search<Box<dyn Iterator<Item = String>>> {
     }
 }
 
-impl Default for Search<Box<dyn Iterator<Item = String>>> {
+impl Default for Search {
     /// Effectively just creates a [`WalkBuilder`] over the current directory
     fn default() -> Self {
         SearchBuilder::default().build()
