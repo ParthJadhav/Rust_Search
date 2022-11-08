@@ -14,16 +14,16 @@ Blazingly fast file search crate built in Rust 🔥
 
 Please report any problems you encounter when using rust search here: [Issues](https://github.com/ParthJadhav/rust_search/issues)
 
-Add `rust_search = "1.0.0"` in Cargo.toml.
+Add `rust_search = "2.0.0"` in Cargo.toml.
 
 ```toml
 [dependencies]
-rust_search = "1.0.0"
+rust_search = "2.0.0"
 ```
 
 ## Examples
 
-Genral use
+General use
 
 ```rust
 use rust_search::SearchBuilder;
@@ -110,13 +110,14 @@ The benchmark was done on a directories containing 45K files.
 
 + rust_search** is 1.09 times faster than FD.
 ```
+
 ## 👨‍💻 Contributors
 
 Any contributions would be greatly valued as this library is still in its early stages.
 
-- Doccumentation
+- Documentation
 - Benchmarks
-- Implementation guidlines
+- Implementation guidelines
 - Code Improvement
 
 If you want to contribute to this project, please follow the steps below:
