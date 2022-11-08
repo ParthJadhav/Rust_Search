@@ -36,17 +36,14 @@ use regex::Regex;
 /// let paths_vec: Vec<String> = search.collect();
 /// ```
 pub struct Search {
-    rx: mpsc::Receiver<String>,
+    rx: Box<dyn Iterator<Item = String>>,
 }
 
 impl Iterator for Search {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.rx.recv() {
-            Ok(v) => Some(v),
-            Err(_) => None,
-        }
+        self.rx.next()
     }
 }
 
@@ -57,9 +54,10 @@ impl Search {
     /// * `search_input` - The search input, defaults to any word
     /// * `file_ext` - The file extension to search for, defaults to any file extension
     /// * `depth` - The depth to search to, defaults to no limit
+    /// * `limit` - The limit of results to return, defaults to no limit
     /// * `strict` - Whether to search for the exact word or not
     /// * `ignore_case` - Whether to ignore case or not
-    /// * `hidden` - Whether to search hidden files or not, files starting with a dot
+    /// * `hidden` - Whether to search hidden files or not
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         search_location: impl AsRef<Path>,
@@ -67,6 +65,7 @@ impl Search {
         search_input: Option<&str>,
         file_ext: Option<&str>,
         depth: Option<usize>,
+        limit: Option<usize>,
         strict: bool,
         ignore_case: bool,
         with_hidden: bool,
@@ -92,6 +91,7 @@ impl Search {
         walker.build_parallel().run(|| {
             let tx: Sender<String> = tx.clone();
             let reg_exp: Regex = regex_search_input.clone();
+            let mut counter = 0;
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
@@ -99,7 +99,14 @@ impl Search {
 
                     if reg_exp.is_match(&path) {
                         return match tx.send(path) {
-                            Ok(_) => WalkState::Continue,
+                            Ok(_) => {
+                                counter += 1;
+                                if limit.is_some() && counter >= limit.unwrap() {
+                                    WalkState::Quit
+                                } else {
+                                    WalkState::Continue
+                                }
+                            }
                             Err(_) => WalkState::Quit,
                         };
                     }
@@ -109,7 +116,17 @@ impl Search {
             })
         });
 
-        Self { rx }
+        if let Some(limit) = limit {
+            // This will take the first `limit` elements from the iterator
+            // will return all if there are less than `limit` elements
+            Self {
+                rx: Box::new(rx.into_iter().take(limit)),
+            }
+        } else {
+            Self {
+                rx: Box::new(rx.into_iter()),
+            }
+        }
     }
 }
 

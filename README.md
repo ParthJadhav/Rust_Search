@@ -33,6 +33,7 @@ fn main(){
         .location("~/path/to/directory")
         .search_input("what to search")
         .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
+        .limit(1000) // results to return
         .ext("extension")
         .strict()
         .depth(1)
