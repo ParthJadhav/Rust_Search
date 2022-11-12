@@ -97,7 +97,7 @@ impl Search {
                 if let Ok(entry) = path_entry {
                     let path: String = entry.path().display().to_string();
 
-                    if reg_exp.is_match(&path) {
+                    if reg_exp.is_match(&path.split("/").last().unwrap()) {
                         return match tx.send(path) {
                             Ok(_) => {
                                 counter += 1;
