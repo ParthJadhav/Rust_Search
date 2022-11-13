@@ -95,7 +95,8 @@ impl Search {
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
-                    if let Some(file_name) = entry.path().file_name() {
+                    let path = entry.path();
+                    if let Some(file_name) = path.file_name() {
                         // Lossy means that if the file name is not valid UTF-8
                         // it will be replaced with �.
                         // Will return the file name with extension.
@@ -103,7 +104,7 @@ impl Search {
                         if reg_exp.is_match(&file_name) {
                             // Contunue searching if the send was successful
                             // and there is no limit or the limit has not been reached
-                            if tx.send(file_name).is_ok()
+                            if tx.send(path.display().to_string()).is_ok()
                                 && (limit.is_none() || counter < limit.unwrap())
                             {
                                 counter += 1;
@@ -114,7 +115,6 @@ impl Search {
                         }
                     }
                 }
-
                 WalkState::Continue
             })
         });
