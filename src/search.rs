@@ -95,23 +95,26 @@ impl Search {
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
-                    let path: String = entry.path().display().to_string();
-
-                    if reg_exp.is_match(&path) {
-                        return match tx.send(path) {
-                            Ok(_) => {
+                    let path = entry.path();
+                    if let Some(file_name) = path.file_name() {
+                        // Lossy means that if the file name is not valid UTF-8
+                        // it will be replaced with �.
+                        // Will return the file name with extension.
+                        let file_name = file_name.to_string_lossy().to_string();
+                        if reg_exp.is_match(&file_name) {
+                            // Contunue searching if the send was successful
+                            // and there is no limit or the limit has not been reached
+                            if tx.send(path.display().to_string()).is_ok()
+                                && (limit.is_none() || counter < limit.unwrap())
+                            {
                                 counter += 1;
-                                if limit.is_some() && counter >= limit.unwrap() {
-                                    WalkState::Quit
-                                } else {
-                                    WalkState::Continue
-                                }
+                                return WalkState::Continue;
+                            } else {
+                                return WalkState::Quit;
                             }
-                            Err(_) => WalkState::Quit,
-                        };
+                        }
                     }
                 }
-
                 WalkState::Continue
             })
         });
