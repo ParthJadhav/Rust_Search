@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
-
 use regex::Regex;
+use std::path::{Path, PathBuf};
+use strsim::jaro_winkler;
 
 pub(crate) fn build_regex_search_input(
     search_input: Option<&str>,
@@ -39,4 +39,50 @@ pub(crate) fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
         }
     }
     path.to_path_buf()
+}
+
+fn file_name_from_path(path: &str) -> String {
+    let path = Path::new(path);
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+    return file_name.to_string();
+}
+
+/// This function can be used to sort the given vector on basis of similarity between the input & the vector
+///
+/// ### Arguments
+/// * `&mut vector` - it needs a mutable reference to the vector
+/// ### Examples
+/// ```rust
+/// use rust_search::{SearchBuilder, similarity_sort};
+/// fn main() {
+///     let search_input = "fly";
+///     let mut search: Vec<String> = SearchBuilder::default()
+///         .location("~/Desktop/")
+///         .search_input(search_input)
+///         .depth(1)
+///         .ignore_case()
+///         .build()
+///         .collect();
+
+///     similarity_sort(&mut search, &search_input);
+///     for path in search {
+///        println!("{:?}", path);
+///     }
+/// }
+/// ```
+/// 
+/// search **without** similarity sort
+/// `["afly.txt", "bfly.txt", "flyer.txt", "fly.txt"]`
+/// 
+/// search **with** similarity sort
+/// `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
+pub fn similarity_sort(vector: &mut Vec<String>, input: &str) {
+    vector.sort_by(|a, b| {
+        let input = input.to_lowercase();
+        let a = file_name_from_path(a).to_lowercase();
+        let b = file_name_from_path(b).to_lowercase();
+        let a = jaro_winkler(a.as_str(), input.as_str());
+        let b = jaro_winkler(b.as_str(), input.as_str());
+        b.partial_cmp(&a).unwrap()
+    });
 }

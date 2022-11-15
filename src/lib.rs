@@ -8,3 +8,4 @@ mod utils;
 
 pub use builder::SearchBuilder;
 pub use search::Search;
+pub use utils::similarity_sort;
