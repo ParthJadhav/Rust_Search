@@ -1,6 +1,10 @@
 use std::path::{Path, PathBuf};
 
+use ignore::DirEntry;
+
 use crate::{utils::replace_tilde_with_home_dir, Search};
+
+pub type FilterFn = fn(&DirEntry) -> bool;
 
 /// Builder for a [`Search`] instance, allowing for more complex searches.
 pub struct SearchBuilder {
@@ -22,6 +26,8 @@ pub struct SearchBuilder {
     ignore_case: bool,
     /// Search for hidden files, defaults to false.
     hidden: bool,
+    /// Filters Vector, defaults to empty vec
+    filters: Vec<FilterFn>,
 }
 
 impl SearchBuilder {
@@ -38,6 +44,7 @@ impl SearchBuilder {
             self.strict,
             self.ignore_case,
             self.hidden,
+            self.filters.clone(),
         )
     }
 
@@ -93,6 +100,25 @@ impl SearchBuilder {
         let ext: String = ext.into();
         // Remove the dot if it's there.
         self.file_ext = Some(ext.strip_prefix('.').map(str::to_owned).unwrap_or(ext));
+        self
+    }
+
+    /// Add a filter to the search function.
+    /// ### Arguments
+    /// * `filter` - Closure getting dir: `DirEntry` variable to modify
+    /// ### Examples
+    /// ```rust
+    /// use std::time::SystemTime;
+    /// use rust_search::{filter::*, SearchBuilder};
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .filter(|dir| created_before(dir, SystemTime::now()))
+    ///     .filter(|dir| modified_before(dir, SystemTime::now()))
+    ///     .filter(|dir| file_size_greater(dir, mb(20.0)))
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn filter(mut self, filter: FilterFn) -> Self {
+        self.filters.push(filter);
         self
     }
 
@@ -219,6 +245,7 @@ impl Default for SearchBuilder {
             strict: false,
             ignore_case: false,
             hidden: false,
+            filters: vec![],
         }
     }
 }

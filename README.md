@@ -71,6 +71,20 @@ let files: Vec<String> = SearchBuilder::default()
     .build()
     .collect();
 ```
+To filter files by date_created, date_modified and/or file_size, use:
+
+```rust
+use std::time::SystemTime;
+use rust_search::{filter::*, SearchBuilder};
+
+let search: Vec<String> = SearchBuilder::default()
+		.filter(|dir| created_before(dir, SystemTime::now()))
+		.filter(|dir| modified_before(dir, SystemTime::now()))
+		.filter(|dir| file_size_greater(dir, mb(20.0)))
+		.build()
+		.collect();
+println!("{:?}", search);
+```
 
 👉 For more examples, please refer to the [Documentation](https://docs.rs/rust_search/latest/rust_search/)
 
