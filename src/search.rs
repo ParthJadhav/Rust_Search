@@ -4,7 +4,7 @@ use std::{
     sync::mpsc::{self, Sender},
 };
 
-use crate::{utils, SearchBuilder};
+use crate::{filter::FilterType, utils, SearchBuilder};
 use ignore::{WalkBuilder, WalkState};
 use regex::Regex;
 
@@ -58,6 +58,7 @@ impl Search {
     /// * `strict` - Whether to search for the exact word or not
     /// * `ignore_case` - Whether to ignore case or not
     /// * `hidden` - Whether to search hidden files or not
+    /// * `filters` - Vector of filters to search by DirEntry data
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         search_location: impl AsRef<Path>,
@@ -69,6 +70,7 @@ impl Search {
         strict: bool,
         ignore_case: bool,
         with_hidden: bool,
+        filters: Vec<FilterType>,
     ) -> Self {
         let regex_search_input =
             utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
@@ -80,6 +82,10 @@ impl Search {
             .git_ignore(true)
             .max_depth(depth)
             .threads(cmp::min(12, num_cpus::get()));
+
+        // filters getting applied to walker
+        // only if all filters are true then the walker will return the file
+        walker.filter_entry(move |dir| filters.iter().all(|f| f.apply(dir)));
 
         if let Some(locations) = more_locations {
             for location in locations {

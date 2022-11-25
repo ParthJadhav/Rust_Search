@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use crate::filter::FilterType;
 use crate::{utils::replace_tilde_with_home_dir, Search};
 
 /// Builder for a [`Search`] instance, allowing for more complex searches.
@@ -22,6 +23,8 @@ pub struct SearchBuilder {
     ignore_case: bool,
     /// Search for hidden files, defaults to false.
     hidden: bool,
+    /// Filters Vector, defaults to empty vec
+    filters: Vec<FilterType>,
 }
 
 impl SearchBuilder {
@@ -38,6 +41,7 @@ impl SearchBuilder {
             self.strict,
             self.ignore_case,
             self.hidden,
+            self.filters.clone(),
         )
     }
 
@@ -93,6 +97,31 @@ impl SearchBuilder {
         let ext: String = ext.into();
         // Remove the dot if it's there.
         self.file_ext = Some(ext.strip_prefix('.').map(str::to_owned).unwrap_or(ext));
+        self
+    }
+
+    /// Add a filter to the search function.
+    /// ### Arguments
+    /// * `filter` - Closure getting dir: `DirEntry` variable to modify
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::{FileSize, FilterExt, SearchBuilder};
+    /// use std::time::{Duration, SystemTime};
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .location("~/path/to/directory")
+    ///     .file_size_greater(FileSize::Kilobyte(200.0))
+    ///     .file_size_smaller(FileSize::Megabyte(10.0))
+    ///     .created_after(SystemTime::now() - Duration::from_secs(3600 * 24 * 10))
+    ///     .created_before(SystemTime::now())
+    ///     .modified_after(SystemTime::now() - Duration::from_secs(3600 * 24 * 5))
+    ///     .custom_filter(|dir| dir.metadata().unwrap().is_file())
+    ///     .custom_filter(|dir| !dir.metadata().unwrap().permissions().readonly())
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn filter(mut self, filter: FilterType) -> Self {
+        self.filters.push(filter);
         self
     }
 
@@ -219,6 +248,7 @@ impl Default for SearchBuilder {
             strict: false,
             ignore_case: false,
             hidden: false,
+            filters: vec![],
         }
     }
 }
