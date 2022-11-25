@@ -1,83 +1,142 @@
+use super::SearchBuilder;
+use ignore::DirEntry;
 use std::{cmp::Ordering, time::SystemTime};
 
-use ignore::DirEntry;
+/// custom filter fn to expose the dir entry directly
+pub type FilterFn = fn(&DirEntry) -> bool;
 
-/// check if `dir`: [DirEntry] is created before `t`: [SystemTime]
-pub fn created_before(dir: &DirEntry, t: SystemTime) -> bool {
-    filter(FilterType::Created(t), dir, Ordering::Less)
-}
-/// check if `dir`: [DirEntry] is created at `t`: [SystemTime]
-pub fn created_at(dir: &DirEntry, t: SystemTime) -> bool {
-    filter(FilterType::Created(t), dir, Ordering::Equal)
-}
-/// check if `dir`: [DirEntry] is created after `t`: [SystemTime]
-pub fn created_after(dir: &DirEntry, t: SystemTime) -> bool {
-    filter(FilterType::Created(t), dir, Ordering::Greater)
+#[derive(Clone, Copy)]
+pub enum FilterType {
+    Created(Ordering, SystemTime),
+    Modified(Ordering, SystemTime),
+    FileSize(Ordering, u64),
+    Custom(FilterFn),
 }
 
-/// check if `dir`: [DirEntry] is modified before `t`: [SystemTime]
-pub fn modified_before(dir: &DirEntry, t: SystemTime) -> bool {
-    filter(FilterType::Modified(t), dir, Ordering::Less)
-}
-/// check if `dir`: [DirEntry] is modified at `t`: [SystemTime]
-pub fn modified_at(dir: &DirEntry, t: SystemTime) -> bool {
-    filter(FilterType::Modified(t), dir, Ordering::Equal)
-}
-/// check if `dir`: [DirEntry] is modified after `t`: [SystemTime]
-pub fn modified_after(dir: &DirEntry, t: SystemTime) -> bool {
-    filter(FilterType::Modified(t), dir, Ordering::Greater)
-}
-
-/// check if `dir`: [DirEntry] is smaller than `size_in_bytes`: [u64]
-pub fn file_size_smaller(dir: &DirEntry, size_in_bytes: u64) -> bool {
-    filter(FilterType::FileSize(size_in_bytes), dir, Ordering::Less)
-}
-/// check if `dir`: [DirEntry] is equal to `size_in_bytes`: [u64]
-pub fn file_size_equals(dir: &DirEntry, size_in_bytes: u64) -> bool {
-    filter(FilterType::FileSize(size_in_bytes), dir, Ordering::Equal)
-}
-/// check if `dir`: [DirEntry] is greater than `size_in_bytes`: [u64]
-pub fn file_size_greater(dir: &DirEntry, size_in_bytes: u64) -> bool {
-    filter(FilterType::FileSize(size_in_bytes), dir, Ordering::Greater)
-}
-
-/// convert kilobytes to bytes
-pub fn kb(kb: f64) -> u64 {
-    (kb * 1024_f64) as u64
-}
-/// convert megabytes to bytes
-pub fn mb(mb: f64) -> u64 {
-    (mb * 1024_u64.pow(2) as f64) as u64
-}
-/// convert gigabytes to bytes
-pub fn gb(gb: f64) -> u64 {
-    (gb * 1024_u64.pow(3) as f64) as u64
-}
-
-enum FilterType {
-    Created(SystemTime),
-    Modified(SystemTime),
-    FileSize(u64),
-}
-
-fn filter(typ: FilterType, dir: &DirEntry, ord: Ordering) -> bool {
-    if let Ok(m) = dir.metadata() {
-        match typ {
-            FilterType::Created(t) => {
-                if let Ok(c) = m.created() {
-                    return c.cmp(&t) == ord;
+impl FilterType {
+    pub fn apply(&self, dir: &DirEntry) -> bool {
+        if let Ok(m) = dir.metadata() {
+            match self {
+                FilterType::Created(cmp, time) => {
+                    if let Ok(created) = m.created() {
+                        return created.cmp(time) == *cmp;
+                    }
                 }
-            }
-            FilterType::Modified(t) => {
-                if let Ok(c) = m.modified() {
-                    return c.cmp(&t) == ord;
+                FilterType::Modified(cmp, time) => {
+                    if let Ok(modified) = m.modified() {
+                        return modified.cmp(time) == *cmp;
+                    }
                 }
-            }
-            FilterType::FileSize(size) => {
-                let len = m.len();
-                return len.cmp(&size) == ord;
+                FilterType::FileSize(cmp, size_in_bytes) => {
+                    return m.len().cmp(size_in_bytes) == *cmp;
+                }
+                FilterType::Custom(f) => return f(dir),
             }
         }
+        false
     }
-    false
+}
+
+/// enum to easily convert between byte_sizes
+#[derive(Debug, Clone)]
+pub enum FileSize {
+    /// size in bytes
+    Byte(u64),
+    /// size in kilobytes
+    Kilobyte(f64),
+    /// size in megabytes
+    Megabyte(f64),
+    /// size in gigabytes
+    Gigabyte(f64),
+    /// size in terabytes
+    Terabyte(f64),
+}
+
+// helper function for FileSize conversion
+fn convert(b: f64, pow: u32) -> u64 {
+    (b * 1024_u64.pow(pow) as f64) as u64
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<u64> for FileSize {
+    fn into(self) -> u64 {
+        use self::FileSize::*;
+        match self {
+            Byte(b) => b,
+            Kilobyte(b) => convert(b, 1),
+            Megabyte(b) => convert(b, 2),
+            Gigabyte(b) => convert(b, 3),
+            Terabyte(b) => convert(b, 4),
+        }
+    }
+}
+
+/// import this trait to filter files
+pub trait FilterExt {
+    /// files created before `t`: [SystemTime]
+    fn created_before(self, t: SystemTime) -> Self;
+    /// files created at `t`: [SystemTime]
+    fn created_at(self, t: SystemTime) -> Self;
+    /// files created after `t`: [SystemTime]
+    fn created_after(self, t: SystemTime) -> Self;
+    /// files created before `t`: [SystemTime]
+    fn modified_before(self, t: SystemTime) -> Self;
+    /// files modified at `t`: [SystemTime]
+    fn modified_at(self, t: SystemTime) -> Self;
+    /// files modified after `t`: [SystemTime]
+    fn modified_after(self, t: SystemTime) -> Self;
+    /// files smaller than `size_in_bytes`: [usize]
+    fn file_size_smaller(self, size: FileSize) -> Self;
+    /// files equal to `size_in_bytes`: [usize]
+    fn file_size_equal(self, size: FileSize) -> Self;
+    /// files greater than `size_in_bytes`: [usize]
+    fn file_size_greater(self, size: FileSize) -> Self;
+    /// custom filter that exposes the [DirEntry] directly
+    /// ```rust
+    /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file())
+    /// ```
+    fn custom_filter(self, f: FilterFn) -> Self;
+}
+
+use FilterType::*;
+use Ordering::*;
+impl FilterExt for SearchBuilder {
+    fn created_before(self, t: SystemTime) -> Self {
+        self.filter(Created(Less, t))
+    }
+
+    fn created_at(self, t: SystemTime) -> Self {
+        self.filter(Created(Equal, t))
+    }
+
+    fn created_after(self, t: SystemTime) -> Self {
+        self.filter(Created(Greater, t))
+    }
+
+    fn modified_before(self, t: SystemTime) -> Self {
+        self.filter(Modified(Less, t))
+    }
+
+    fn modified_at(self, t: SystemTime) -> Self {
+        self.filter(Modified(Equal, t))
+    }
+
+    fn modified_after(self, t: SystemTime) -> Self {
+        self.filter(Modified(Greater, t))
+    }
+
+    fn file_size_smaller(self, size: FileSize) -> Self {
+        self.filter(FileSize(Less, size.into()))
+    }
+
+    fn file_size_equal(self, size: FileSize) -> Self {
+        self.filter(FileSize(Equal, size.into()))
+    }
+
+    fn file_size_greater(self, size: FileSize) -> Self {
+        self.filter(FileSize(Greater, size.into()))
+    }
+    fn custom_filter(self, f: FilterFn) -> Self {
+        self.filter(Custom(f))
+    }
 }

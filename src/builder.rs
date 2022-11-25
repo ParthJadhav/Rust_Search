@@ -1,10 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use ignore::DirEntry;
-
+use crate::filter::FilterType;
 use crate::{utils::replace_tilde_with_home_dir, Search};
-
-pub type FilterFn = fn(&DirEntry) -> bool;
 
 /// Builder for a [`Search`] instance, allowing for more complex searches.
 pub struct SearchBuilder {
@@ -27,7 +24,7 @@ pub struct SearchBuilder {
     /// Search for hidden files, defaults to false.
     hidden: bool,
     /// Filters Vector, defaults to empty vec
-    filters: Vec<FilterFn>,
+    filters: Vec<FilterType>,
 }
 
 impl SearchBuilder {
@@ -108,16 +105,22 @@ impl SearchBuilder {
     /// * `filter` - Closure getting dir: `DirEntry` variable to modify
     /// ### Examples
     /// ```rust
-    /// use std::time::SystemTime;
-    /// use rust_search::{filter::*, SearchBuilder};
+    /// use rust_search::{FileSize, FilterExt, SearchBuilder};
+    /// use std::time::{Duration, SystemTime};
+    ///
     /// let search: Vec<String> = SearchBuilder::default()
-    ///     .filter(|dir| created_before(dir, SystemTime::now()))
-    ///     .filter(|dir| modified_before(dir, SystemTime::now()))
-    ///     .filter(|dir| file_size_greater(dir, mb(20.0)))
+    ///     .location("~/path/to/directory")
+    ///     .file_size_greater(FileSize::Kilobyte(200.0))
+    ///     .file_size_smaller(FileSize::Megabyte(10.0))
+    ///     .created_after(SystemTime::now() - Duration::from_secs(3600 * 24 * 10))
+    ///     .created_before(SystemTime::now())
+    ///     .modified_after(SystemTime::now() - Duration::from_secs(3600 * 24 * 5))
+    ///     .custom_filter(|dir| dir.metadata().unwrap().is_file())
+    ///     .custom_filter(|dir| !dir.metadata().unwrap().permissions().readonly())
     ///     .build()
     ///     .collect();
     /// ```
-    pub fn filter(mut self, filter: FilterFn) -> Self {
+    pub fn filter(mut self, filter: FilterType) -> Self {
         self.filters.push(filter);
         self
     }
