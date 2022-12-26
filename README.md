@@ -23,7 +23,7 @@ rust_search = "2.0.0"
 
 ## Examples
 
-General use
+- General use
 
 ```rust
 use rust_search::SearchBuilder;
@@ -48,7 +48,34 @@ fn main(){
 }
 ```
 
-To get all the files with a specific extension in a directory, use:
+- Sort the output by similarity with the input
+
+```rust
+ use rust_search::{SearchBuilder, similarity_sort};
+ fn main() {
+     let search_input = "fly";
+     let mut search: Vec<String> = SearchBuilder::default()
+         .location("~/Desktop/")
+         .search_input(search_input)
+         .depth(1)
+         .ignore_case()
+         .build()
+        .collect();
+
+     similarity_sort(&mut search, &search_input);
+     for path in search {
+        println!("{:?}", path);
+     }
+ }
+ 
+```
+> search **without** similarity sort
+`["afly.txt", "bfly.txt", "flyer.txt", "fly.txt"]`
+
+> search **with** similarity sort
+`["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
+
+- To get all the files with a specific extension in a directory, use:
 
 ```rust
 use rust_search::SearchBuilder;
@@ -60,7 +87,7 @@ let files: Vec<String> = SearchBuilder::default()
     .collect();
 ```
 
-To get all the files in a directory, use:
+- To get all the files in a directory, use:
 
 ```rust
 use rust_search::SearchBuilder;

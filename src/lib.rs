@@ -13,3 +13,4 @@ pub use filter::{FileSize, FilterExt, FilterFn};
 // export this in order to use it with custom filter functions
 pub use ignore::DirEntry;
 pub use search::Search;
+pub use utils::similarity_sort;
