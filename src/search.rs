@@ -58,7 +58,7 @@ impl Search {
     /// * `strict` - Whether to search for the exact word or not
     /// * `ignore_case` - Whether to ignore case or not
     /// * `hidden` - Whether to search hidden files or not
-    /// * `filters` - Vector of filters to search by DirEntry data
+    /// * `filters` - Vector of filters to search by `DirEntry` data
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         search_location: impl AsRef<Path>,
@@ -115,9 +115,9 @@ impl Search {
                             {
                                 counter += 1;
                                 return WalkState::Continue;
-                            } else {
-                                return WalkState::Quit;
                             }
+
+                            return WalkState::Quit;
                         }
                     }
                 }

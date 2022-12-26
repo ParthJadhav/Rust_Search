@@ -17,27 +17,27 @@ impl FilterType {
     pub fn apply(&self, dir: &DirEntry) -> bool {
         if let Ok(m) = dir.metadata() {
             match self {
-                FilterType::Created(cmp, time) => {
+                Self::Created(cmp, time) => {
                     if let Ok(created) = m.created() {
                         return created.cmp(time) == *cmp;
                     }
                 }
-                FilterType::Modified(cmp, time) => {
+                Self::Modified(cmp, time) => {
                     if let Ok(modified) = m.modified() {
                         return modified.cmp(time) == *cmp;
                     }
                 }
-                FilterType::FileSize(cmp, size_in_bytes) => {
+                Self::FileSize(cmp, size_in_bytes) => {
                     return m.len().cmp(size_in_bytes) == *cmp;
                 }
-                FilterType::Custom(f) => return f(dir),
+                Self::Custom(f) => return f(dir),
             }
         }
         false
     }
 }
 
-/// enum to easily convert between byte_sizes
+/// enum to easily convert between `byte_sizes`
 #[derive(Debug, Clone)]
 pub enum FileSize {
     /// size in bytes
@@ -60,7 +60,8 @@ fn convert(b: f64, pow: u32) -> u64 {
 #[allow(clippy::from_over_into)]
 impl Into<u64> for FileSize {
     fn into(self) -> u64 {
-        use self::FileSize::*;
+        use self::FileSize::{Byte, Gigabyte, Kilobyte, Megabyte, Terabyte};
+
         match self {
             Byte(b) => b,
             Kilobyte(b) => convert(b, 1),
@@ -73,17 +74,17 @@ impl Into<u64> for FileSize {
 
 /// import this trait to filter files
 pub trait FilterExt {
-    /// files created before `t`: [SystemTime]
+    /// files created before `t`: [`SystemTime`]
     fn created_before(self, t: SystemTime) -> Self;
-    /// files created at `t`: [SystemTime]
+    /// files created at `t`: [`SystemTime`]
     fn created_at(self, t: SystemTime) -> Self;
-    /// files created after `t`: [SystemTime]
+    /// files created after `t`: [`SystemTime`]
     fn created_after(self, t: SystemTime) -> Self;
-    /// files created before `t`: [SystemTime]
+    /// files created before `t`: [`SystemTime`]
     fn modified_before(self, t: SystemTime) -> Self;
-    /// files modified at `t`: [SystemTime]
+    /// files modified at `t`: [`SystemTime`]
     fn modified_at(self, t: SystemTime) -> Self;
-    /// files modified after `t`: [SystemTime]
+    /// files modified after `t`: [`SystemTime`]
     fn modified_after(self, t: SystemTime) -> Self;
     /// files smaller than `size_in_bytes`: [usize]
     fn file_size_smaller(self, size: FileSize) -> Self;
@@ -91,15 +92,15 @@ pub trait FilterExt {
     fn file_size_equal(self, size: FileSize) -> Self;
     /// files greater than `size_in_bytes`: [usize]
     fn file_size_greater(self, size: FileSize) -> Self;
-    /// custom filter that exposes the [DirEntry] directly
+    /// custom filter that exposes the [`DirEntry`] directly
     /// ```rust
     /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file())
     /// ```
     fn custom_filter(self, f: FilterFn) -> Self;
 }
 
-use FilterType::*;
-use Ordering::*;
+use FilterType::{Created, Custom, FileSize as FilterFileSize, Modified};
+use Ordering::{Equal, Greater, Less};
 impl FilterExt for SearchBuilder {
     fn created_before(self, t: SystemTime) -> Self {
         self.filter(Created(Less, t))
@@ -126,15 +127,15 @@ impl FilterExt for SearchBuilder {
     }
 
     fn file_size_smaller(self, size: FileSize) -> Self {
-        self.filter(FileSize(Less, size.into()))
+        self.filter(FilterFileSize(Less, size.into()))
     }
 
     fn file_size_equal(self, size: FileSize) -> Self {
-        self.filter(FileSize(Equal, size.into()))
+        self.filter(FilterFileSize(Equal, size.into()))
     }
 
     fn file_size_greater(self, size: FileSize) -> Self {
-        self.filter(FileSize(Greater, size.into()))
+        self.filter(FilterFileSize(Greater, size.into()))
     }
     fn custom_filter(self, f: FilterFn) -> Self {
         self.filter(Custom(f))
