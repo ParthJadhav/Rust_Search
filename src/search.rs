@@ -108,7 +108,7 @@ impl Search {
                         // Will return the file name with extension.
                         let file_name = file_name.to_string_lossy().to_string();
                         if reg_exp.is_match(&file_name) {
-                            // Contunue searching if the send was successful
+                            // Continue searching if the send was successful
                             // and there is no limit or the limit has not been reached
                             if tx.send(path.display().to_string()).is_ok()
                                 && (limit.is_none() || counter < limit.unwrap())
