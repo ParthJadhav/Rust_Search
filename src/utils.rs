@@ -2,7 +2,9 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 use strsim::jaro_winkler;
 
-pub(crate) fn build_regex_search_input(
+const FUZZY_SEARCH: &str = r".*";
+
+pub fn build_regex_search_input(
     search_input: Option<&str>,
     file_ext: Option<&str>,
     strict: bool,
@@ -10,13 +12,13 @@ pub(crate) fn build_regex_search_input(
 ) -> Regex {
     let file_type = file_ext.unwrap_or("*");
     let search_input = search_input.unwrap_or(r"\w+");
-    const FUZZY_SEARCH: &str = r".*";
-    let mut formatted_search_input;
-    if strict {
-        formatted_search_input = format!(r#"{}\.{}$"#, search_input, file_type);
+
+    let mut formatted_search_input = if strict {
+        format!(r#"{search_input}\.{file_type}$"#)
     } else {
-        formatted_search_input = format!(r#"{}{}\.{}$"#, search_input, FUZZY_SEARCH, file_type);
-    }
+        format!(r#"{search_input}{FUZZY_SEARCH}\.{file_type}$"#)
+    };
+
     if ignore_case {
         formatted_search_input = set_case_insensitive(&formatted_search_input);
     }
@@ -30,7 +32,7 @@ fn set_case_insensitive(formatted_search_input: &str) -> String {
 /// Replace the tilde with the home directory, if it exists
 /// ### Arguments
 /// * `path` - The path to replace the tilde with the home directory
-pub(crate) fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
+pub fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
     let path = path.as_ref();
     if path.starts_with("~") {
         if let Some(home_dir) = dirs::home_dir() {
@@ -44,7 +46,7 @@ pub(crate) fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
 fn file_name_from_path(path: &str) -> String {
     let path = Path::new(path);
     let file_name = path.file_name().unwrap().to_str().unwrap();
-    return file_name.to_string();
+    file_name.to_string()
 }
 
 /// This function can be used to sort the given vector on basis of similarity between the input & the vector
@@ -54,29 +56,31 @@ fn file_name_from_path(path: &str) -> String {
 /// ### Examples
 /// ```rust
 /// use rust_search::{SearchBuilder, similarity_sort};
-/// fn main() {
-///     let search_input = "fly";
-///     let mut search: Vec<String> = SearchBuilder::default()
-///         .location("~/Desktop/")
-///         .search_input(search_input)
-///         .depth(1)
-///         .ignore_case()
-///         .build()
-///         .collect();
+///
+/// let search_input = "fly";
+/// let mut search: Vec<String> = SearchBuilder::default()
+///     .location("~/Desktop/")
+///     .search_input(search_input)
+///     .depth(1)
+///     .ignore_case()
+///     .build()
+///     .collect();
 
-///     similarity_sort(&mut search, &search_input);
-///     for path in search {
-///        println!("{:?}", path);
-///     }
+/// similarity_sort(&mut search, &search_input);
+/// for path in search {
+///     println!("{:?}", path);
 /// }
 /// ```
-/// 
+///
 /// search **without** similarity sort
 /// `["afly.txt", "bfly.txt", "flyer.txt", "fly.txt"]`
-/// 
+///
 /// search **with** similarity sort
 /// `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
-pub fn similarity_sort(vector: &mut Vec<String>, input: &str) {
+///
+/// ### Panics
+/// Will panic if `partial_cmp` is None
+pub fn similarity_sort(vector: &mut [String], input: &str) {
     vector.sort_by(|a, b| {
         let input = input.to_lowercase();
         let a = file_name_from_path(a).to_lowercase();

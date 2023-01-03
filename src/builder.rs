@@ -96,7 +96,7 @@ impl SearchBuilder {
     pub fn ext(mut self, ext: impl Into<String>) -> Self {
         let ext: String = ext.into();
         // Remove the dot if it's there.
-        self.file_ext = Some(ext.strip_prefix('.').map(str::to_owned).unwrap_or(ext));
+        self.file_ext = Some(ext.strip_prefix('.').map_or(ext.clone(), str::to_owned));
         self
     }
 
@@ -137,7 +137,7 @@ impl SearchBuilder {
     ///     .build()
     ///     .collect();
     /// ```
-    pub fn depth(mut self, depth: usize) -> Self {
+    pub const fn depth(mut self, depth: usize) -> Self {
         self.depth = Some(depth);
         self
     }
@@ -154,7 +154,7 @@ impl SearchBuilder {
     ///     .build()
     ///     .collect();
     /// ```
-    pub fn limit(mut self, limit: usize) -> Self {
+    pub const fn limit(mut self, limit: usize) -> Self {
         self.limit = Some(limit);
         self
     }
@@ -172,7 +172,7 @@ impl SearchBuilder {
     ///     .build()
     ///     .collect();
     /// ```
-    pub fn strict(mut self) -> Self {
+    pub const fn strict(mut self) -> Self {
         self.strict = true;
         self
     }
@@ -190,7 +190,7 @@ impl SearchBuilder {
     ///     .build()
     ///     .collect();
     /// ```
-    pub fn ignore_case(mut self) -> Self {
+    pub const fn ignore_case(mut self) -> Self {
         self.ignore_case = true;
         self
     }
@@ -205,7 +205,7 @@ impl SearchBuilder {
     ///     .build()
     ///     .collect();
     /// ```
-    pub fn hidden(mut self) -> Self {
+    pub const fn hidden(mut self) -> Self {
         self.hidden = true;
         self
     }
