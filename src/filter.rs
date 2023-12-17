@@ -14,8 +14,11 @@ pub enum FilterType {
 }
 
 impl FilterType {
-    pub fn apply(&self, dir: &DirEntry) -> bool {
+    pub fn apply(&self, dir: &DirEntry, filter_dirs: bool) -> bool {
         if let Ok(m) = dir.metadata() {
+            if !filter_dirs && m.file_type().is_dir() {
+                return true;
+            }
             match self {
                 Self::Created(cmp, time) => {
                     if let Ok(created) = m.created() {

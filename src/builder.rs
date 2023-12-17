@@ -25,6 +25,8 @@ pub struct SearchBuilder {
     hidden: bool,
     /// Filters Vector, defaults to empty vec
     filters: Vec<FilterType>,
+    /// When set to false, will not apply filters to directories and will exclude them from results.
+    dirs: bool,
 }
 
 impl SearchBuilder {
@@ -42,6 +44,7 @@ impl SearchBuilder {
             self.ignore_case,
             self.hidden,
             self.filters.clone(),
+            self.dirs,
         )
     }
 
@@ -233,6 +236,23 @@ impl SearchBuilder {
         );
         self
     }
+
+    /// Choose whether to apply filters to directories and include matches in search results. Defaults to true.
+    /// ### Arguments
+    /// * `value`
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .dirs(false)
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn dirs(mut self, value: bool) -> Self {
+        self.dirs = value;
+        self
+    }
 }
 
 impl Default for SearchBuilder {
@@ -249,6 +269,7 @@ impl Default for SearchBuilder {
             ignore_case: false,
             hidden: false,
             filters: vec![],
+            dirs: true,
         }
     }
 }
