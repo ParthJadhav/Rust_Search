@@ -97,7 +97,9 @@ pub trait FilterExt {
     fn file_size_greater(self, size: FileSize) -> Self;
     /// custom filter that exposes the [`DirEntry`] directly
     /// ```rust
-    /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file())
+    /// # use rust_search::FilterExt;
+    /// # let builder = rust_search::SearchBuilder::default();
+    /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file());
     /// ```
     fn custom_filter(self, f: FilterFn) -> Self;
 }

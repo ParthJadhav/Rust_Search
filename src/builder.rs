@@ -204,7 +204,7 @@ impl SearchBuilder {
     /// use rust_search::SearchBuilder;
     ///
     /// let search: Vec<String> = SearchBuilder::default()
-    ///     .with_hidden()
+    ///     .hidden()
     ///     .build()
     ///     .collect();
     /// ```

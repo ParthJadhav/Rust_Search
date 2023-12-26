@@ -16,10 +16,10 @@ use regex::Regex;
 ///
 /// ## Iterate on the results
 ///
-/// ```
+/// ```ignore
 /// use rust_search::Search;
 ///
-/// let search = Search::new("src", None, Some(".rs"), Some(1));
+/// let search = Search::new("src", None, None, Some(".rs"), Some(1), None, false, false, false, vec![], true);
 ///
 /// for path in search {
 ///    println!("{:?}", path);
@@ -28,10 +28,10 @@ use regex::Regex;
 ///
 /// ## Collect results into a vector
 ///
-/// ```
+/// ```ignore
 /// use rust_search::Search;
 ///
-/// let search = Search::new("src", None, Some(".rs"), Some(1));
+/// let search = Search::new("src", None, None, Some(".rs"), Some(1), None, false, false, false, vec![], true);
 ///
 /// let paths_vec: Vec<String> = search.collect();
 /// ```
@@ -51,13 +51,14 @@ impl Search {
     /// Search for files in a given arguments
     /// ### Arguments
     /// * `search_location` - The location to search in
+    /// * `more_locations` - Additional locations to search in
     /// * `search_input` - The search input, defaults to any word
     /// * `file_ext` - The file extension to search for, defaults to any file extension
     /// * `depth` - The depth to search to, defaults to no limit
     /// * `limit` - The limit of results to return, defaults to no limit
     /// * `strict` - Whether to search for the exact word or not
     /// * `ignore_case` - Whether to ignore case or not
-    /// * `hidden` - Whether to search hidden files or not
+    /// * `with_hidden` - Whether to search hidden files or not
     /// * `filters` - Vector of filters to search by `DirEntry` data
     /// * `dirs` - Whether to apply filters to directories and include them in results.
     #[allow(clippy::too_many_arguments)]
