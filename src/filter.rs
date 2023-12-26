@@ -14,8 +14,11 @@ pub enum FilterType {
 }
 
 impl FilterType {
-    pub fn apply(&self, dir: &DirEntry) -> bool {
+    pub fn apply(&self, dir: &DirEntry, filter_dirs: bool) -> bool {
         if let Ok(m) = dir.metadata() {
+            if !filter_dirs && m.file_type().is_dir() {
+                return true;
+            }
             match self {
                 Self::Created(cmp, time) => {
                     if let Ok(created) = m.created() {
@@ -94,7 +97,9 @@ pub trait FilterExt {
     fn file_size_greater(self, size: FileSize) -> Self;
     /// custom filter that exposes the [`DirEntry`] directly
     /// ```rust
-    /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file())
+    /// # use rust_search::FilterExt;
+    /// # let builder = rust_search::SearchBuilder::default();
+    /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file());
     /// ```
     fn custom_filter(self, f: FilterFn) -> Self;
 }
