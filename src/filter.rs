@@ -57,12 +57,11 @@ fn convert(b: f64, pow: u32) -> u64 {
     (b * 1024_u64.pow(pow) as f64) as u64
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<u64> for FileSize {
-    fn into(self) -> u64 {
+impl From<FileSize> for u64 {
+    fn from(size: FileSize) -> Self {
         use self::FileSize::{Byte, Gigabyte, Kilobyte, Megabyte, Terabyte};
 
-        match self {
+        match size {
             Byte(b) => b,
             Kilobyte(b) => convert(b, 1),
             Megabyte(b) => convert(b, 2),
@@ -94,7 +93,12 @@ pub trait FilterExt {
     fn file_size_greater(self, size: FileSize) -> Self;
     /// custom filter that exposes the [`DirEntry`] directly
     /// ```rust
-    /// builder.custom_filter(|dir| dir.metadata().unwrap().is_file())
+    /// use rust_search::{SearchBuilder, FilterExt};
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .custom_filter(|dir| dir.metadata().unwrap().is_file())
+    ///     .build()
+    ///     .collect();
     /// ```
     fn custom_filter(self, f: FilterFn) -> Self;
 }

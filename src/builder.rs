@@ -96,7 +96,10 @@ impl SearchBuilder {
     pub fn ext(mut self, ext: impl Into<String>) -> Self {
         let ext: String = ext.into();
         // Remove the dot if it's there.
-        self.file_ext = Some(ext.strip_prefix('.').map_or(ext.clone(), str::to_owned));
+        self.file_ext = Some(
+            ext.strip_prefix('.')
+                .map_or_else(|| ext.clone(), str::to_owned),
+        );
         self
     }
 
@@ -201,7 +204,7 @@ impl SearchBuilder {
     /// use rust_search::SearchBuilder;
     ///
     /// let search: Vec<String> = SearchBuilder::default()
-    ///     .with_hidden()
+    ///     .hidden()
     ///     .build()
     ///     .collect();
     /// ```
