@@ -5,6 +5,7 @@
 Blazingly fast file search crate built in Rust 🔥
 
 [![Version info](https://img.shields.io/crates/v/rust_search.svg)](https://crates.io/crates/rust_search)
+[![Downloads](https://img.shields.io/crates/d/rust_search.svg)](https://crates.io/crates/rust_search)
 [![Documentation](https://docs.rs/rust_search/badge.svg)](https://docs.rs/rust_search)
 [![License](https://img.shields.io/crates/l/rust_search.svg)](https://github.com/parthjadhav/rust_search/blob/master/LICENSE-MIT)
 
