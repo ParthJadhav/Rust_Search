@@ -18,6 +18,7 @@ ignore = "0.4"
 dirs = "4.0.0"
 strsim = "0.10.0"
 crossbeam-channel = "0.5.15"
+rayon = "1.11.0"
 
 [dev-dependencies]
 dirs = "4.0.0"

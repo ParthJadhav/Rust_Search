@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
@@ -80,22 +81,32 @@ fn file_name_from_path(path: &str) -> &str {
 /// search **with** similarity sort
 /// `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
 pub fn similarity_sort(vector: &mut [String], input: &str) {
+    const PARALLEL_SORT_THRESHOLD: usize = 5000;
     let input = input.to_lowercase();
-    // Schwartzian transform: precompute all scores once, then sort by score.
-    // This avoids recomputing file_name extraction, lowercasing, and jaro_winkler
-    // on every comparison (O(n log n) comparisons become O(n) score computations).
-    let mut scored: Vec<(usize, f64)> = vector
-        .iter()
-        .enumerate()
-        .map(|(i, path)| {
-            let name = file_name_from_path(path).to_lowercase();
-            (i, jaro_winkler(&name, &input))
-        })
-        .collect();
+    // Schwartzian transform: precompute all scores, then sort by score.
+    // Use parallel scoring only for large datasets where rayon overhead is worthwhile.
+    let mut scored: Vec<(usize, f64)> = if vector.len() >= PARALLEL_SORT_THRESHOLD {
+        vector
+            .par_iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let name = file_name_from_path(path).to_lowercase();
+                (i, jaro_winkler(&name, &input))
+            })
+            .collect()
+    } else {
+        vector
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let name = file_name_from_path(path).to_lowercase();
+                (i, jaro_winkler(&name, &input))
+            })
+            .collect()
+    };
     scored.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
 
     // Reorder vector in-place according to the sorted indices.
-    // Use a permutation cycle approach to avoid extra allocations.
     let order: Vec<usize> = scored.into_iter().map(|(i, _)| i).collect();
     apply_permutation(vector, order);
 }

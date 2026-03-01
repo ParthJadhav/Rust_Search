@@ -228,9 +228,9 @@ fn main() {
             let (count, median) = bench_similarity_sort();
             eprintln!("sort:         {} items, median {:?}", count, median);
 
-            // Controlled benchmarks (50 dirs x 200 files = 10,000 files)
-            eprintln!("\n--- Controlled (10,000 files) ---");
-            let dir = create_test_dir(50, 200);
+            // Controlled benchmarks (500 dirs x 200 files = 100,000 files)
+            eprintln!("\n--- Controlled (100,000 files) ---");
+            let dir = create_test_dir(500, 200);
 
             let (count, median) = bench_controlled_search(&dir);
             eprintln!("ctrl_search:  {} results, median {:?}", count, median);
