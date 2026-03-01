@@ -12,9 +12,13 @@ use crossbeam_channel::Sender;
 use ignore::types::TypesBuilder;
 use ignore::{WalkBuilder, WalkState};
 
-/// Matcher strategy: either a fast extension-only check or a full regex.
+/// Matcher strategy for the walk callback.
 enum Matcher {
+    /// The types pre-filter already handles extension matching; accept all entries.
+    AcceptAll,
+    /// Simple extension-only check (fallback when types filter setup failed).
     ExtOnly(String),
+    /// Full regex matching on file names.
     Regex(regex::Regex),
 }
 
@@ -89,28 +93,6 @@ impl Search {
         with_hidden: bool,
         filters: Vec<FilterType>,
     ) -> Self {
-        // Fast path: when only an extension is specified (no search_input, not strict,
-        // not ignore_case), skip regex entirely and use a simple extension check.
-        let matcher = if search_input.is_none() && !strict && !ignore_case {
-            if let Some(ext) = file_ext {
-                Matcher::ExtOnly(ext.to_owned())
-            } else {
-                Matcher::Regex(utils::build_regex_search_input(
-                    search_input,
-                    file_ext,
-                    strict,
-                    ignore_case,
-                ))
-            }
-        } else {
-            Matcher::Regex(utils::build_regex_search_input(
-                search_input,
-                file_ext,
-                strict,
-                ignore_case,
-            ))
-        };
-
         let mut walker = WalkBuilder::new(search_location);
 
         // Use more threads than CPUs for I/O-bound work: while one thread
@@ -127,16 +109,36 @@ impl Search {
 
         // Pre-filter by extension using ignore's type system when possible.
         // This avoids calling our callback for non-matching files.
+        let mut types_filter_active = false;
         if let Some(ext) = file_ext {
             let mut types = TypesBuilder::new();
-            types.add_defaults();
             if types.add("custom", &format!("*.{ext}")).is_ok() {
                 types.select("custom");
                 if let Ok(built) = types.build() {
                     walker.types(built);
+                    types_filter_active = true;
                 }
             }
         }
+
+        // Determine the matcher strategy based on search parameters.
+        let matcher = if search_input.is_none() && !strict && !ignore_case {
+            if file_ext.is_some() && types_filter_active {
+                // Types pre-filter handles extension matching; no additional check needed.
+                Matcher::AcceptAll
+            } else if let Some(ext) = file_ext {
+                // Fallback: simple extension comparison.
+                Matcher::ExtOnly(ext.to_owned())
+            } else {
+                Matcher::Regex(utils::build_regex_search_input(
+                    search_input, file_ext, strict, ignore_case,
+                ))
+            }
+        } else {
+            Matcher::Regex(utils::build_regex_search_input(
+                search_input, file_ext, strict, ignore_case,
+            ))
+        };
 
         // Only apply filter_entry if there are filters to check
         if !filters.is_empty() {
@@ -160,13 +162,17 @@ impl Search {
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
-                    let path = entry.path();
+                    // Check match using borrowed path first, then convert to owned
+                    // only if matched (avoids allocation for non-matching entries).
                     let matched = match matcher.as_ref() {
+                        Matcher::AcceptAll => {
+                            entry.file_type().is_some_and(|ft| !ft.is_dir())
+                        }
                         Matcher::ExtOnly(ext) => {
-                            path.extension() == Some(OsStr::new(ext.as_str()))
+                            entry.path().extension() == Some(OsStr::new(ext.as_str()))
                         }
                         Matcher::Regex(reg_exp) => {
-                            if let Some(file_name) = path.file_name() {
+                            if let Some(file_name) = entry.path().file_name() {
                                 let file_name = file_name.to_string_lossy();
                                 reg_exp.is_match(&file_name)
                             } else {
@@ -175,10 +181,17 @@ impl Search {
                         }
                     };
                     if matched {
-                        if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l)
-                            && tx.send(path.to_string_lossy().into_owned()).is_ok()
-                        {
-                            return WalkState::Continue;
+                        if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l) {
+                            // Use into_path() for zero-copy PathBuf, then try zero-copy
+                            // String conversion (succeeds for valid UTF-8 paths).
+                            let path_string = entry
+                                .into_path()
+                                .into_os_string()
+                                .into_string()
+                                .unwrap_or_else(|os| os.to_string_lossy().into_owned());
+                            if tx.send(path_string).is_ok() {
+                                return WalkState::Continue;
+                            }
                         }
                         return WalkState::Quit;
                     }
