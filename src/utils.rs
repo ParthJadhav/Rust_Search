@@ -44,12 +44,11 @@ pub fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
     path.to_path_buf()
 }
 
-fn file_name_from_path(path: &str) -> String {
+fn file_name_from_path(path: &str) -> &str {
     Path::new(path)
         .file_name()
         .and_then(|f| f.to_str())
         .unwrap_or(path)
-        .to_string()
 }
 
 /// This function can be used to sort the given vector on basis of similarity between the input & the vector
@@ -82,13 +81,33 @@ fn file_name_from_path(path: &str) -> String {
 /// `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
 pub fn similarity_sort(vector: &mut [String], input: &str) {
     let input = input.to_lowercase();
-    vector.sort_by(|a, b| {
-        let a = file_name_from_path(a).to_lowercase();
-        let b = file_name_from_path(b).to_lowercase();
-        let a = jaro_winkler(a.as_str(), input.as_str());
-        let b = jaro_winkler(b.as_str(), input.as_str());
-        b.partial_cmp(&a).unwrap_or(Ordering::Equal)
-    });
+    // Schwartzian transform: precompute all scores once, then sort by score.
+    // This avoids recomputing file_name extraction, lowercasing, and jaro_winkler
+    // on every comparison (O(n log n) comparisons become O(n) score computations).
+    let mut scored: Vec<(usize, f64)> = vector
+        .iter()
+        .enumerate()
+        .map(|(i, path)| {
+            let name = file_name_from_path(path).to_lowercase();
+            (i, jaro_winkler(&name, &input))
+        })
+        .collect();
+    scored.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+
+    // Reorder vector in-place according to the sorted indices.
+    // Use a permutation cycle approach to avoid extra allocations.
+    let order: Vec<usize> = scored.into_iter().map(|(i, _)| i).collect();
+    apply_permutation(vector, order);
+}
+
+fn apply_permutation<T>(v: &mut [T], mut order: Vec<usize>) {
+    for i in 0..v.len() {
+        while order[i] != i {
+            let j = order[i];
+            v.swap(i, j);
+            order.swap(i, j);
+        }
+    }
 }
 
 #[cfg(test)]
