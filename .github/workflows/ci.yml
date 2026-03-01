@@ -32,25 +32,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          profile: minimal
-          override: true
-
-      - name: Install Rust library source
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          profile: minimal
-          override: true
-          components: rust-src
+        run: rustup toolchain install stable --target ${{ matrix.target }} --profile minimal
 
       - name: Build
         run: cargo build --verbose --target ${{ matrix.target }}
@@ -59,15 +44,13 @@ jobs:
         run: cargo test --verbose --target ${{ matrix.target }}
 
   lint:
-    name: Formatter
-
-    needs: build-test
+    name: Lint & Format
 
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust
         run: |
@@ -79,5 +62,5 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Check code for possible improvements
+      - name: Run clippy
         run: cargo clippy -- -D warnings

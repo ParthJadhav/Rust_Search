@@ -1,12 +1,15 @@
 use std::{
     cmp,
     path::Path,
-    sync::mpsc::{self, Sender},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc::{self, Sender},
+        Arc,
+    },
 };
 
 use crate::{filter::FilterType, utils, SearchBuilder};
 use ignore::{WalkBuilder, WalkState};
-use regex::Regex;
 
 /// A struct that holds the receiver for the search results
 ///
@@ -17,9 +20,13 @@ use regex::Regex;
 /// ## Iterate on the results
 ///
 /// ```
-/// use rust_search::Search;
+/// use rust_search::SearchBuilder;
 ///
-/// let search = Search::new("src", None, Some(".rs"), Some(1));
+/// let search = SearchBuilder::default()
+///     .location("src")
+///     .ext("rs")
+///     .depth(1)
+///     .build();
 ///
 /// for path in search {
 ///    println!("{:?}", path);
@@ -29,11 +36,14 @@ use regex::Regex;
 /// ## Collect results into a vector
 ///
 /// ```
-/// use rust_search::Search;
+/// use rust_search::SearchBuilder;
 ///
-/// let search = Search::new("src", None, Some(".rs"), Some(1));
-///
-/// let paths_vec: Vec<String> = search.collect();
+/// let paths_vec: Vec<String> = SearchBuilder::default()
+///     .location("src")
+///     .ext("rs")
+///     .depth(1)
+///     .build()
+///     .collect();
 /// ```
 pub struct Search {
     rx: Box<dyn Iterator<Item = String>>,
@@ -94,10 +104,13 @@ impl Search {
         }
 
         let (tx, rx) = mpsc::channel::<String>();
+        let reg_exp = Arc::new(regex_search_input);
+        let counter = Arc::new(AtomicUsize::new(0));
+
         walker.build_parallel().run(|| {
             let tx: Sender<String> = tx.clone();
-            let reg_exp: Regex = regex_search_input.clone();
-            let mut counter = 0;
+            let reg_exp = Arc::clone(&reg_exp);
+            let counter = Arc::clone(&counter);
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
@@ -106,17 +119,13 @@ impl Search {
                         // Lossy means that if the file name is not valid UTF-8
                         // it will be replaced with �.
                         // Will return the file name with extension.
-                        let file_name = file_name.to_string_lossy().to_string();
+                        let file_name = file_name.to_string_lossy();
                         if reg_exp.is_match(&file_name) {
-                            // Continue searching if the send was successful
-                            // and there is no limit or the limit has not been reached
-                            if tx.send(path.display().to_string()).is_ok()
-                                && (limit.is_none() || counter < limit.unwrap())
+                            if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l)
+                                && tx.send(path.display().to_string()).is_ok()
                             {
-                                counter += 1;
                                 return WalkState::Continue;
                             }
-
                             return WalkState::Quit;
                         }
                     }

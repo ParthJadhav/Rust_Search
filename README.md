@@ -28,52 +28,48 @@ rust_search = "2.0.0"
 ```rust
 use rust_search::SearchBuilder;
 
-fn main(){
-    let search: Vec<String> = SearchBuilder::default()
-        .location("~/path/to/directory")
-        .search_input("what to search")
-        .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
-        .limit(1000) // results to return
-        .ext("extension")
-        .strict()
-        .depth(1)
-        .ignore_case()
-        .hidden()
-        .build()
-        .collect();
+let search: Vec<String> = SearchBuilder::default()
+    .location("~/path/to/directory")
+    .search_input("what to search")
+    .more_locations(vec!["/anotherPath/to/search", "/keepAddingIfYouWant/"])
+    .limit(1000) // results to return
+    .ext("extension")
+    .strict()
+    .depth(1)
+    .ignore_case()
+    .hidden()
+    .build()
+    .collect();
 
-    for path in search {
-        println!("{}", path);
-    }
+for path in search {
+    println!("{}", path);
 }
 ```
 
 - Sort the output by similarity with the input
 
 ```rust
- use rust_search::{SearchBuilder, similarity_sort};
- fn main() {
-     let search_input = "fly";
-     let mut search: Vec<String> = SearchBuilder::default()
-         .location("~/Desktop/")
-         .search_input(search_input)
-         .depth(1)
-         .ignore_case()
-         .build()
-        .collect();
+use rust_search::{SearchBuilder, similarity_sort};
 
-     similarity_sort(&mut search, &search_input);
-     for path in search {
-        println!("{:?}", path);
-     }
- }
- 
+let search_input = "fly";
+let mut search: Vec<String> = SearchBuilder::default()
+    .location("~/Desktop/")
+    .search_input(search_input)
+    .depth(1)
+    .ignore_case()
+    .build()
+    .collect();
+
+similarity_sort(&mut search, &search_input);
+for path in search {
+    println!("{:?}", path);
+}
 ```
 > search **without** similarity sort
-`["afly.txt", "bfly.txt", "flyer.txt", "fly.txt"]`
+> `["afly.txt", "bfly.txt", "flyer.txt", "fly.txt"]`
 
 > search **with** similarity sort
-`["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
+> `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
 
 - To get all the files with a specific extension in a directory, use:
 
@@ -98,7 +94,7 @@ let files: Vec<String> = SearchBuilder::default()
     .build()
     .collect();
 ```
-To filter files by date_created, date_modified, file_size and/or custom_filter, use:
+To filter files by `date_created`, `date_modified`, `file_size` and/or `custom_filter`, use:
 
 ```rust
 use rust_search::{FileSize, FilterExt, SearchBuilder};
@@ -121,7 +117,7 @@ let search: Vec<String> = SearchBuilder::default()
 
 ## ⚙️ Benchmarks
 
-The difference in sample size is due to the fact that fd and glob are different tools and have different use cases. fd is a command line tool that searches for files and directories. glob is a library that can be used to search for files and directories. The benchmark is done on a MacBook Air M2, 16 GB Unified memory.
+The difference in sample size is due to the fact that fd and glob are different tools and have different use cases. fd is a command line tool that searches for files and directories. glob is a library that can be used to search for files and directories. The benchmark is done on a `MacBook` Air M2, 16 GB Unified memory.
 
 Benchmarks are done using [hyperfine](https://github.com/sharkdp/hyperfine),
 Benchmarks files are available in the [benchmarks](https://drive.google.com/drive/folders/1ug6ojNixS5jAe6Lh6M0o2d3tku73zQ9w?usp=sharing) drive folder.
