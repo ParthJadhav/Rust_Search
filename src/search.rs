@@ -4,12 +4,13 @@ use std::{
     path::Path,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        mpsc::{self, Sender},
         Arc,
     },
 };
 
 use crate::{filter::FilterType, utils, SearchBuilder};
+use crossbeam_channel::Sender;
+use ignore::types::TypesBuilder;
 use ignore::{WalkBuilder, WalkState};
 
 /// Matcher strategy: either a fast extension-only check or a full regex.
@@ -113,15 +114,33 @@ impl Search {
 
         let mut walker = WalkBuilder::new(search_location);
 
+        // Use more threads than CPUs for I/O-bound work: while one thread
+        // waits for I/O, others can make progress.
+        let thread_count = cmp::max(8, num_cpus::get() * 2);
+
         walker
             .hidden(!with_hidden)
             .git_ignore(true)
             .max_depth(depth)
-            .threads(cmp::min(12, num_cpus::get()));
+            .threads(thread_count);
 
-        // filters getting applied to walker
-        // only if all filters are true then the walker will return the file
-        walker.filter_entry(move |dir| filters.iter().all(|f| f.apply(dir)));
+        // Pre-filter by extension using ignore's type system when possible.
+        // This avoids calling our callback for non-matching files.
+        if let Some(ext) = file_ext {
+            let mut types = TypesBuilder::new();
+            types.add_defaults();
+            if types.add("custom", &format!("*.{ext}")).is_ok() {
+                types.select("custom");
+                if let Ok(built) = types.build() {
+                    walker.types(built);
+                }
+            }
+        }
+
+        // Only apply filter_entry if there are filters to check
+        if !filters.is_empty() {
+            walker.filter_entry(move |dir| filters.iter().all(|f| f.apply(dir)));
+        }
 
         if let Some(locations) = more_locations {
             for location in locations {
@@ -129,7 +148,7 @@ impl Search {
             }
         }
 
-        let (tx, rx) = mpsc::channel::<String>();
+        let (tx, rx) = crossbeam_channel::unbounded::<String>();
         let matcher = Arc::new(matcher);
         let counter = Arc::new(AtomicUsize::new(0));
 
@@ -167,9 +186,10 @@ impl Search {
             })
         });
 
+        // Drop the sender so the receiver knows when all results have been sent
+        drop(tx);
+
         if let Some(limit) = limit {
-            // This will take the first `limit` elements from the iterator
-            // will return all if there are less than `limit` elements
             Self {
                 rx: Box::new(rx.into_iter().take(limit)),
             }
