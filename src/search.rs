@@ -1,5 +1,4 @@
 use std::{
-    cmp,
     ffi::OsStr,
     path::Path,
     sync::{
@@ -116,7 +115,9 @@ impl Search {
 
         // Use more threads than CPUs for I/O-bound work: while one thread
         // waits for I/O, others can make progress.
-        let thread_count = cmp::max(8, num_cpus::get() * 2);
+        let cpus = std::thread::available_parallelism()
+            .map_or(8, std::num::NonZero::get);
+        let thread_count = cpus * 2;
 
         walker
             .hidden(!with_hidden)
