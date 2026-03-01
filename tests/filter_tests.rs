@@ -68,10 +68,7 @@ fn file_size_smaller_filter() {
         .file_size_smaller(FileSize::Kilobyte(10.0))
         .build()
         .collect();
-    assert!(
-        !results.is_empty(),
-        "All fixture files should be < 10KB"
-    );
+    assert!(!results.is_empty(), "All fixture files should be < 10KB");
 }
 
 #[test]
@@ -79,11 +76,7 @@ fn custom_filter_works() {
     // Filter to only include files (not directories)
     let results: Vec<String> = SearchBuilder::default()
         .location(&fixtures_path())
-        .custom_filter(|dir| {
-            dir.metadata()
-                .map(|m| m.is_file())
-                .unwrap_or(false)
-        })
+        .custom_filter(|dir| dir.metadata().map(|m| m.is_file()).unwrap_or(false))
         .build()
         .collect();
     assert!(!results.is_empty(), "Should find files with custom filter");
