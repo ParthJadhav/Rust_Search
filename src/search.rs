@@ -1,5 +1,6 @@
 use std::{
     cmp,
+    ffi::OsStr,
     path::Path,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -10,6 +11,12 @@ use std::{
 
 use crate::{filter::FilterType, utils, SearchBuilder};
 use ignore::{WalkBuilder, WalkState};
+
+/// Matcher strategy: either a fast extension-only check or a full regex.
+enum Matcher {
+    ExtOnly(String),
+    Regex(regex::Regex),
+}
 
 /// A struct that holds the receiver for the search results
 ///
@@ -82,8 +89,27 @@ impl Search {
         with_hidden: bool,
         filters: Vec<FilterType>,
     ) -> Self {
-        let regex_search_input =
-            utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
+        // Fast path: when only an extension is specified (no search_input, not strict,
+        // not ignore_case), skip regex entirely and use a simple extension check.
+        let matcher = if search_input.is_none() && !strict && !ignore_case {
+            if let Some(ext) = file_ext {
+                Matcher::ExtOnly(ext.to_owned())
+            } else {
+                Matcher::Regex(utils::build_regex_search_input(
+                    search_input,
+                    file_ext,
+                    strict,
+                    ignore_case,
+                ))
+            }
+        } else {
+            Matcher::Regex(utils::build_regex_search_input(
+                search_input,
+                file_ext,
+                strict,
+                ignore_case,
+            ))
+        };
 
         let mut walker = WalkBuilder::new(search_location);
 
@@ -104,30 +130,37 @@ impl Search {
         }
 
         let (tx, rx) = mpsc::channel::<String>();
-        let reg_exp = Arc::new(regex_search_input);
+        let matcher = Arc::new(matcher);
         let counter = Arc::new(AtomicUsize::new(0));
 
         walker.build_parallel().run(|| {
             let tx: Sender<String> = tx.clone();
-            let reg_exp = Arc::clone(&reg_exp);
+            let matcher = Arc::clone(&matcher);
             let counter = Arc::clone(&counter);
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
                     let path = entry.path();
-                    if let Some(file_name) = path.file_name() {
-                        // Lossy means that if the file name is not valid UTF-8
-                        // it will be replaced with �.
-                        // Will return the file name with extension.
-                        let file_name = file_name.to_string_lossy();
-                        if reg_exp.is_match(&file_name) {
-                            if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l)
-                                && tx.send(path.display().to_string()).is_ok()
-                            {
-                                return WalkState::Continue;
-                            }
-                            return WalkState::Quit;
+                    let matched = match matcher.as_ref() {
+                        Matcher::ExtOnly(ext) => {
+                            path.extension() == Some(OsStr::new(ext.as_str()))
                         }
+                        Matcher::Regex(reg_exp) => {
+                            if let Some(file_name) = path.file_name() {
+                                let file_name = file_name.to_string_lossy();
+                                reg_exp.is_match(&file_name)
+                            } else {
+                                false
+                            }
+                        }
+                    };
+                    if matched {
+                        if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l)
+                            && tx.send(path.to_string_lossy().into_owned()).is_ok()
+                        {
+                            return WalkState::Continue;
+                        }
+                        return WalkState::Quit;
                     }
                 }
                 WalkState::Continue
