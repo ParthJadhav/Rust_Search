@@ -45,7 +45,7 @@ fn file_size_greater_filter() {
     // Note: the root directory entry bypasses filter_entry in the ignore crate,
     // so we only check that no actual file passes the filter.
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .file_size_greater(FileSize::Kilobyte(10.0))
         .build()
         .collect();
@@ -64,7 +64,7 @@ fn file_size_greater_filter() {
 fn file_size_smaller_filter() {
     // All fixture files are tiny, so size < 10KB should return all files
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .file_size_smaller(FileSize::Kilobyte(10.0))
         .build()
         .collect();
@@ -75,7 +75,7 @@ fn file_size_smaller_filter() {
 fn custom_filter_works() {
     // Filter to only include files (not directories)
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .custom_filter(|dir| dir.metadata().map(|m| m.is_file()).unwrap_or(false))
         .build()
         .collect();
@@ -87,7 +87,7 @@ fn created_after_epoch_finds_files() {
     // All files were created after UNIX epoch
     let epoch = SystemTime::UNIX_EPOCH;
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .created_after(epoch)
         .build()
         .collect();
@@ -102,7 +102,7 @@ fn modified_before_future_finds_files() {
     // All files were modified before far future
     let future = SystemTime::now() + Duration::from_secs(3600 * 24 * 365 * 10);
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .modified_before(future)
         .build()
         .collect();

@@ -97,8 +97,7 @@ impl Search {
 
         // Use more threads than CPUs for I/O-bound work: while one thread
         // waits for I/O, others can make progress.
-        let cpus = std::thread::available_parallelism()
-            .map_or(8, std::num::NonZero::get);
+        let cpus = std::thread::available_parallelism().map_or(8, std::num::NonZero::get);
         let thread_count = cpus * 2;
 
         walker
@@ -131,12 +130,18 @@ impl Search {
                 Matcher::ExtOnly(ext.to_owned())
             } else {
                 Matcher::Regex(utils::build_regex_search_input(
-                    search_input, file_ext, strict, ignore_case,
+                    search_input,
+                    file_ext,
+                    strict,
+                    ignore_case,
                 ))
             }
         } else {
             Matcher::Regex(utils::build_regex_search_input(
-                search_input, file_ext, strict, ignore_case,
+                search_input,
+                file_ext,
+                strict,
+                ignore_case,
             ))
         };
 
@@ -164,23 +169,19 @@ impl Search {
                 if let Ok(entry) = path_entry {
                     // Check match using borrowed path first, then convert to owned
                     // only if matched (avoids allocation for non-matching entries).
-                    let matched = match matcher.as_ref() {
-                        Matcher::AcceptAll => {
-                            entry.file_type().is_some_and(|ft| !ft.is_dir())
-                        }
+                    let is_match = match matcher.as_ref() {
+                        Matcher::AcceptAll => entry.file_type().is_some_and(|ft| !ft.is_dir()),
                         Matcher::ExtOnly(ext) => {
                             entry.path().extension() == Some(OsStr::new(ext.as_str()))
                         }
                         Matcher::Regex(reg_exp) => {
-                            if let Some(file_name) = entry.path().file_name() {
+                            entry.path().file_name().is_some_and(|file_name| {
                                 let file_name = file_name.to_string_lossy();
                                 reg_exp.is_match(&file_name)
-                            } else {
-                                false
-                            }
+                            })
                         }
                     };
-                    if matched {
+                    if is_match {
                         if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l) {
                             // Use into_path() for zero-copy PathBuf, then try zero-copy
                             // String conversion (succeeds for valid UTF-8 paths).
