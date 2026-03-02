@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 const WARMUP_ITERS: usize = 1;
-const BENCH_ITERS: usize = 5;
+const BENCH_ITERS: usize = 3;
 
 fn median(times: &mut [Duration]) -> Duration {
     times.sort();
@@ -13,7 +13,6 @@ fn median(times: &mut [Duration]) -> Duration {
 }
 
 /// Create a controlled test directory with many files for benchmarking.
-/// Returns the path to the temp dir (caller should clean up).
 fn create_test_dir(num_dirs: usize, files_per_dir: usize) -> PathBuf {
     let dir = std::env::temp_dir().join("rust_search_bench");
     let _ = fs::remove_dir_all(&dir);
@@ -36,217 +35,162 @@ fn create_test_dir(num_dirs: usize, files_per_dir: usize) -> PathBuf {
     dir
 }
 
-fn bench_search() -> (usize, Duration) {
-    let home = dirs::home_dir().unwrap();
-
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        let _: Vec<String> = SearchBuilder::default()
-            .location(&home)
-            .ext("rs")
-            .build()
-            .collect();
+fn run_bench<F: Fn() -> Vec<String>>(label: &str, warmup: usize, iters: usize, f: F) -> (usize, Duration) {
+    for _ in 0..warmup {
+        let _ = f();
     }
 
-    let mut times = Vec::with_capacity(BENCH_ITERS);
+    let mut times = Vec::with_capacity(iters);
     let mut count = 0;
-    for _ in 0..BENCH_ITERS {
+    for _ in 0..iters {
         let start = Instant::now();
-        let results: Vec<String> = SearchBuilder::default()
-            .location(&home)
-            .ext("rs")
-            .build()
-            .collect();
+        let results = f();
         times.push(start.elapsed());
         count = results.len();
     }
 
-    (count, median(&mut times))
+    let med = median(&mut times);
+    eprintln!("{label:<28} {count:>8} results, median {med:>12.3?}");
+    (count, med)
 }
 
-fn bench_search_with_limit() -> (usize, Duration) {
-    let home = dirs::home_dir().unwrap();
-
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        let _: Vec<String> = SearchBuilder::default()
-            .location(&home)
-            .ext("rs")
-            .limit(100)
-            .build()
-            .collect();
-    }
-
-    let mut times = Vec::with_capacity(BENCH_ITERS);
-    let mut count = 0;
-    for _ in 0..BENCH_ITERS {
-        let start = Instant::now();
-        let results: Vec<String> = SearchBuilder::default()
-            .location(&home)
-            .ext("rs")
-            .limit(100)
-            .build()
-            .collect();
-        times.push(start.elapsed());
-        count = results.len();
-    }
-
-    (count, median(&mut times))
-}
-
-fn bench_similarity_sort() -> (usize, Duration) {
-    let home = dirs::home_dir().unwrap();
-
-    // Collect results once
-    let base_results: Vec<String> = SearchBuilder::default()
-        .location(&home)
-        .ext("rs")
-        .build()
-        .collect();
+fn run_sort_bench(label: &str, base_results: &[String], input: &str, warmup: usize, iters: usize) -> (usize, Duration) {
     let count = base_results.len();
 
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        let mut results = base_results.clone();
-        similarity_sort(&mut results, "main");
+    for _ in 0..warmup {
+        let mut results = base_results.to_vec();
+        similarity_sort(&mut results, input);
     }
 
-    let mut times = Vec::with_capacity(BENCH_ITERS);
-    for _ in 0..BENCH_ITERS {
-        let mut results = base_results.clone();
+    let mut times = Vec::with_capacity(iters);
+    for _ in 0..iters {
+        let mut results = base_results.to_vec();
         let start = Instant::now();
-        similarity_sort(&mut results, "main");
+        similarity_sort(&mut results, input);
         times.push(start.elapsed());
     }
 
-    (count, median(&mut times))
-}
-
-fn bench_controlled_search(dir: &Path) -> (usize, Duration) {
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        let _: Vec<String> = SearchBuilder::default()
-            .location(dir)
-            .ext("rs")
-            .build()
-            .collect();
-    }
-
-    let mut times = Vec::with_capacity(BENCH_ITERS);
-    let mut count = 0;
-    for _ in 0..BENCH_ITERS {
-        let start = Instant::now();
-        let results: Vec<String> = SearchBuilder::default()
-            .location(dir)
-            .ext("rs")
-            .build()
-            .collect();
-        times.push(start.elapsed());
-        count = results.len();
-    }
-
-    (count, median(&mut times))
-}
-
-fn bench_controlled_search_with_input(dir: &Path) -> (usize, Duration) {
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        let _: Vec<String> = SearchBuilder::default()
-            .location(dir)
-            .search_input("file_00")
-            .ext("rs")
-            .build()
-            .collect();
-    }
-
-    let mut times = Vec::with_capacity(BENCH_ITERS);
-    let mut count = 0;
-    for _ in 0..BENCH_ITERS {
-        let start = Instant::now();
-        let results: Vec<String> = SearchBuilder::default()
-            .location(dir)
-            .search_input("file_00")
-            .ext("rs")
-            .build()
-            .collect();
-        times.push(start.elapsed());
-        count = results.len();
-    }
-
-    (count, median(&mut times))
-}
-
-fn bench_controlled_similarity_sort(dir: &Path) -> (usize, Duration) {
-    let base_results: Vec<String> = SearchBuilder::default()
-        .location(dir)
-        .ext("rs")
-        .build()
-        .collect();
-    let count = base_results.len();
-
-    // Warmup
-    for _ in 0..WARMUP_ITERS {
-        let mut results = base_results.clone();
-        similarity_sort(&mut results, "file_0042");
-    }
-
-    let mut times = Vec::with_capacity(BENCH_ITERS);
-    for _ in 0..BENCH_ITERS {
-        let mut results = base_results.clone();
-        let start = Instant::now();
-        similarity_sort(&mut results, "file_0042");
-        times.push(start.elapsed());
-    }
-
-    (count, median(&mut times))
+    let med = median(&mut times);
+    eprintln!("{label:<28} {count:>8} items,   median {med:>12.3?}");
+    (count, med)
 }
 
 fn main() {
     let arg = std::env::args().nth(1).unwrap_or_default();
     match arg.as_str() {
         "search" => {
-            let (count, median) = bench_search();
-            eprintln!("search: {} results, median {:?} ({} iters)", count, median, BENCH_ITERS);
+            let home = dirs::home_dir().unwrap();
+            run_bench("search", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location(&home).ext("rs").build().collect()
+            });
         }
         "limit" => {
-            let (count, median) = bench_search_with_limit();
-            eprintln!("limit: {} results, median {:?} ({} iters)", count, median, BENCH_ITERS);
+            let home = dirs::home_dir().unwrap();
+            run_bench("limit", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location(&home).ext("rs").limit(100).build().collect()
+            });
         }
         "sort" => {
-            let (count, median) = bench_similarity_sort();
-            eprintln!("sort: {} items, median {:?} ({} iters)", count, median, BENCH_ITERS);
+            let home = dirs::home_dir().unwrap();
+            let base: Vec<String> = SearchBuilder::default().location(&home).ext("rs").build().collect();
+            run_sort_bench("sort", &base, "main", WARMUP_ITERS, BENCH_ITERS);
         }
         "all" => {
-            eprintln!("=== Running all benchmarks ===\n");
+            let home = dirs::home_dir().unwrap();
 
-            let (count, median) = bench_search();
-            eprintln!("search:       {} results, median {:?}", count, median);
+            eprintln!("=== Home directory benchmarks ===\n");
 
-            let (count, median) = bench_search_with_limit();
-            eprintln!("limit:        {} results, median {:?}", count, median);
+            run_bench("home/ext_only (.rs)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location(&home).ext("rs").build().collect()
+            });
+            run_bench("home/ext+limit (.rs, 100)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location(&home).ext("rs").limit(100).build().collect()
+            });
 
-            let (count, median) = bench_similarity_sort();
-            eprintln!("sort:         {} items, median {:?}", count, median);
+            let base: Vec<String> = SearchBuilder::default().location(&home).ext("rs").build().collect();
+            run_sort_bench("home/sort", &base, "main", WARMUP_ITERS, BENCH_ITERS);
 
-            // Controlled benchmarks (500 dirs x 200 files = 100,000 files)
-            eprintln!("\n--- Controlled (100,000 files) ---");
+            // Controlled benchmarks
+            eprintln!("\n=== Controlled (100,000 files) ===\n");
             let dir = create_test_dir(500, 200);
 
-            let (count, median) = bench_controlled_search(&dir);
-            eprintln!("ctrl_search:  {} results, median {:?}", count, median);
+            run_bench("ctrl/ext_only (.rs)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location(&dir).ext("rs").build().collect()
+            });
+            run_bench("ctrl/ext+input (file_00.rs)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location(&dir).search_input("file_00").ext("rs").build().collect()
+            });
 
-            let (count, median) = bench_controlled_search_with_input(&dir);
-            eprintln!("ctrl_input:   {} results, median {:?}", count, median);
-
-            let (count, median) = bench_controlled_similarity_sort(&dir);
-            eprintln!("ctrl_sort:    {} items, median {:?}", count, median);
+            let ctrl_base: Vec<String> = SearchBuilder::default().location(&dir).ext("rs").build().collect();
+            run_sort_bench("ctrl/sort", &ctrl_base, "file_0042", WARMUP_ITERS, BENCH_ITERS);
 
             let _ = fs::remove_dir_all(&dir);
 
             eprintln!("\n=== Done ===");
         }
+        "system" => {
+            eprintln!("=== Full system benchmarks (searching from /) ===");
+            eprintln!("=== {} iters, {} warmup ===\n", BENCH_ITERS, WARMUP_ITERS);
+
+            // 1. Search for .rs files across the entire system
+            let (rs_count, _) = run_bench("system/ext_only (.rs)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").ext("rs").build().collect()
+            });
+
+            // 2. Search for .txt files (typically many more)
+            run_bench("system/ext_only (.txt)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").ext("txt").build().collect()
+            });
+
+            // 3. Search for .py files
+            run_bench("system/ext_only (.py)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").ext("py").build().collect()
+            });
+
+            // 4. Search with regex pattern + extension
+            run_bench("system/regex+ext (main*.rs)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").search_input("main").ext("rs").build().collect()
+            });
+
+            // 5. Search with limit
+            run_bench("system/ext+limit (.rs, 1000)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").ext("rs").limit(1000).build().collect()
+            });
+
+            // 6. Search for all files (no filter)
+            run_bench("system/no_filter (all)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").build().collect()
+            });
+
+            // 7. Similarity sort on the .rs results
+            if rs_count > 0 {
+                let rs_results: Vec<String> = SearchBuilder::default()
+                    .location("/")
+                    .ext("rs")
+                    .build()
+                    .collect();
+                run_sort_bench("system/sort (.rs results)", &rs_results, "main", WARMUP_ITERS, BENCH_ITERS);
+            }
+
+            // 8. Search hidden files
+            run_bench("system/hidden (.conf)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").ext("conf").hidden().build().collect()
+            });
+
+            // 9. Strict match
+            run_bench("system/strict (Cargo.toml)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").search_input("Cargo").ext("toml").strict().build().collect()
+            });
+
+            // 10. Case-insensitive search
+            run_bench("system/icase (readme.md)", WARMUP_ITERS, BENCH_ITERS, || {
+                SearchBuilder::default().location("/").search_input("readme").ext("md").ignore_case().build().collect()
+            });
+
+            eprintln!("\n=== Done ===");
+        }
         _ => {
-            eprintln!("Usage: bench_search [search|limit|sort|all]");
+            eprintln!("Usage: bench_search [search|limit|sort|all|system]");
         }
     }
 }
