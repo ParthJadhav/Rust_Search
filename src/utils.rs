@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
@@ -44,12 +45,11 @@ pub fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
     path.to_path_buf()
 }
 
-fn file_name_from_path(path: &str) -> String {
+fn file_name_from_path(path: &str) -> &str {
     Path::new(path)
         .file_name()
         .and_then(|f| f.to_str())
         .unwrap_or(path)
-        .to_string()
 }
 
 /// This function can be used to sort the given vector on basis of similarity between the input & the vector
@@ -81,14 +81,44 @@ fn file_name_from_path(path: &str) -> String {
 /// search **with** similarity sort
 /// `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
 pub fn similarity_sort(vector: &mut [String], input: &str) {
+    const PARALLEL_SORT_THRESHOLD: usize = 5000;
     let input = input.to_lowercase();
-    vector.sort_by(|a, b| {
-        let a = file_name_from_path(a).to_lowercase();
-        let b = file_name_from_path(b).to_lowercase();
-        let a = jaro_winkler(a.as_str(), input.as_str());
-        let b = jaro_winkler(b.as_str(), input.as_str());
-        b.partial_cmp(&a).unwrap_or(Ordering::Equal)
-    });
+    // Schwartzian transform: precompute all scores, then sort by score.
+    // Use parallel scoring only for large datasets where rayon overhead is worthwhile.
+    let mut scored: Vec<(usize, f64)> = if vector.len() >= PARALLEL_SORT_THRESHOLD {
+        vector
+            .par_iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let name = file_name_from_path(path).to_lowercase();
+                (i, jaro_winkler(&name, &input))
+            })
+            .collect()
+    } else {
+        vector
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let name = file_name_from_path(path).to_lowercase();
+                (i, jaro_winkler(&name, &input))
+            })
+            .collect()
+    };
+    scored.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+
+    // Reorder vector in-place according to the sorted indices.
+    let order: Vec<usize> = scored.into_iter().map(|(i, _)| i).collect();
+    apply_permutation(vector, order);
+}
+
+fn apply_permutation<T>(v: &mut [T], mut order: Vec<usize>) {
+    for i in 0..v.len() {
+        while order[i] != i {
+            let j = order[i];
+            v.swap(i, j);
+            order.swap(i, j);
+        }
+    }
 }
 
 #[cfg(test)]

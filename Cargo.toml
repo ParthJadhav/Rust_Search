@@ -15,6 +15,14 @@ categories = ["filesystem", "algorithms"]
 [dependencies]
 regex = "1"
 ignore = "0.4"
-num_cpus = "1.0"
 dirs = "4.0.0"
 strsim = "0.10.0"
+crossbeam-channel = "0.5.15"
+rayon = "1.11.0"
+
+[dev-dependencies]
+dirs = "4.0.0"
+
+[[bench]]
+name = "bench_search"
+harness = false

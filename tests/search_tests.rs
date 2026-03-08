@@ -12,7 +12,7 @@ fn fixtures_path() -> String {
 #[test]
 fn basic_search_finds_files() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .build()
         .collect();
     // Should find at least the known fixture files
@@ -27,7 +27,7 @@ fn basic_search_finds_files() {
 #[test]
 fn search_ext_filters_by_extension() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .ext("rs")
         .build()
         .collect();
@@ -40,7 +40,7 @@ fn search_ext_filters_by_extension() {
 #[test]
 fn search_input_matches_filename() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .search_input("hello")
         .build()
         .collect();
@@ -56,14 +56,14 @@ fn search_input_matches_filename() {
 fn search_depth_limits_traversal() {
     // depth(1) means only the fixtures dir itself, not subdir/deep/
     let shallow: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .ext("rs")
         .depth(1)
         .build()
         .collect();
 
     let deep: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .ext("rs")
         .build()
         .collect();
@@ -88,7 +88,7 @@ fn search_depth_limits_traversal() {
 #[test]
 fn search_limit_caps_results() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .limit(2)
         .build()
         .collect();
@@ -102,7 +102,7 @@ fn search_limit_caps_results() {
 #[test]
 fn search_strict_matches_exact() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .search_input("hello")
         .ext("rs")
         .strict()
@@ -122,7 +122,7 @@ fn search_strict_matches_exact() {
 #[test]
 fn search_ignore_case() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .search_input("HELLO")
         .ext("rs")
         .ignore_case()
@@ -134,12 +134,12 @@ fn search_ignore_case() {
 #[test]
 fn search_hidden_includes_hidden_files() {
     let without_hidden: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .build()
         .collect();
 
     let with_hidden: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .hidden()
         .build()
         .collect();
@@ -158,7 +158,7 @@ fn search_hidden_includes_hidden_files() {
 fn search_more_locations() {
     let subdir = fixtures_dir().join("subdir").display().to_string();
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .more_locations(vec![&subdir])
         .ext("rs")
         .depth(1)
@@ -175,7 +175,7 @@ fn search_more_locations() {
 #[test]
 fn search_chained_options() {
     let results: Vec<String> = SearchBuilder::default()
-        .location(&fixtures_path())
+        .location(fixtures_path())
         .search_input("nested")
         .ext("rs")
         .strict()

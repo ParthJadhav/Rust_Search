@@ -1,15 +1,26 @@
 use std::{
-    cmp,
+    ffi::OsStr,
     path::Path,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        mpsc::{self, Sender},
         Arc,
     },
 };
 
 use crate::{filter::FilterType, utils, SearchBuilder};
+use crossbeam_channel::Sender;
+use ignore::types::TypesBuilder;
 use ignore::{WalkBuilder, WalkState};
+
+/// Matcher strategy for the walk callback.
+enum Matcher {
+    /// The types pre-filter already handles extension matching; accept all entries.
+    AcceptAll,
+    /// Simple extension-only check (fallback when types filter setup failed).
+    ExtOnly(String),
+    /// Full regex matching on file names.
+    Regex(regex::Regex),
+}
 
 /// A struct that holds the receiver for the search results
 ///
@@ -82,20 +93,62 @@ impl Search {
         with_hidden: bool,
         filters: Vec<FilterType>,
     ) -> Self {
-        let regex_search_input =
-            utils::build_regex_search_input(search_input, file_ext, strict, ignore_case);
-
         let mut walker = WalkBuilder::new(search_location);
+
+        // Use more threads than CPUs for I/O-bound work: while one thread
+        // waits for I/O, others can make progress.
+        let cpus = std::thread::available_parallelism().map_or(8, std::num::NonZero::get);
+        let thread_count = cpus * 2;
 
         walker
             .hidden(!with_hidden)
             .git_ignore(true)
             .max_depth(depth)
-            .threads(cmp::min(12, num_cpus::get()));
+            .threads(thread_count);
 
-        // filters getting applied to walker
-        // only if all filters are true then the walker will return the file
-        walker.filter_entry(move |dir| filters.iter().all(|f| f.apply(dir)));
+        // Pre-filter by extension using ignore's type system when possible.
+        // This avoids calling our callback for non-matching files.
+        let mut types_filter_active = false;
+        if let Some(ext) = file_ext {
+            let mut types = TypesBuilder::new();
+            if types.add("custom", &format!("*.{ext}")).is_ok() {
+                types.select("custom");
+                if let Ok(built) = types.build() {
+                    walker.types(built);
+                    types_filter_active = true;
+                }
+            }
+        }
+
+        // Determine the matcher strategy based on search parameters.
+        let matcher = if search_input.is_none() && !strict && !ignore_case {
+            if file_ext.is_some() && types_filter_active {
+                // Types pre-filter handles extension matching; no additional check needed.
+                Matcher::AcceptAll
+            } else if let Some(ext) = file_ext {
+                // Fallback: simple extension comparison.
+                Matcher::ExtOnly(ext.to_owned())
+            } else {
+                Matcher::Regex(utils::build_regex_search_input(
+                    search_input,
+                    file_ext,
+                    strict,
+                    ignore_case,
+                ))
+            }
+        } else {
+            Matcher::Regex(utils::build_regex_search_input(
+                search_input,
+                file_ext,
+                strict,
+                ignore_case,
+            ))
+        };
+
+        // Only apply filter_entry if there are filters to check
+        if !filters.is_empty() {
+            walker.filter_entry(move |dir| filters.iter().all(|f| f.apply(dir)));
+        }
 
         if let Some(locations) = more_locations {
             for location in locations {
@@ -103,40 +156,55 @@ impl Search {
             }
         }
 
-        let (tx, rx) = mpsc::channel::<String>();
-        let reg_exp = Arc::new(regex_search_input);
+        let (tx, rx) = crossbeam_channel::unbounded::<String>();
+        let matcher = Arc::new(matcher);
         let counter = Arc::new(AtomicUsize::new(0));
 
         walker.build_parallel().run(|| {
             let tx: Sender<String> = tx.clone();
-            let reg_exp = Arc::clone(&reg_exp);
+            let matcher = Arc::clone(&matcher);
             let counter = Arc::clone(&counter);
 
             Box::new(move |path_entry| {
                 if let Ok(entry) = path_entry {
-                    let path = entry.path();
-                    if let Some(file_name) = path.file_name() {
-                        // Lossy means that if the file name is not valid UTF-8
-                        // it will be replaced with �.
-                        // Will return the file name with extension.
-                        let file_name = file_name.to_string_lossy();
-                        if reg_exp.is_match(&file_name) {
-                            if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l)
-                                && tx.send(path.display().to_string()).is_ok()
-                            {
+                    // Check match using borrowed path first, then convert to owned
+                    // only if matched (avoids allocation for non-matching entries).
+                    let is_match = match matcher.as_ref() {
+                        Matcher::AcceptAll => entry.file_type().is_some_and(|ft| !ft.is_dir()),
+                        Matcher::ExtOnly(ext) => {
+                            entry.path().extension() == Some(OsStr::new(ext.as_str()))
+                        }
+                        Matcher::Regex(reg_exp) => {
+                            entry.path().file_name().is_some_and(|file_name| {
+                                let file_name = file_name.to_string_lossy();
+                                reg_exp.is_match(&file_name)
+                            })
+                        }
+                    };
+                    if is_match {
+                        if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l) {
+                            // Use into_path() for zero-copy PathBuf, then try zero-copy
+                            // String conversion (succeeds for valid UTF-8 paths).
+                            let path_string = entry
+                                .into_path()
+                                .into_os_string()
+                                .into_string()
+                                .unwrap_or_else(|os| os.to_string_lossy().into_owned());
+                            if tx.send(path_string).is_ok() {
                                 return WalkState::Continue;
                             }
-                            return WalkState::Quit;
                         }
+                        return WalkState::Quit;
                     }
                 }
                 WalkState::Continue
             })
         });
 
+        // Drop the sender so the receiver knows when all results have been sent
+        drop(tx);
+
         if let Some(limit) = limit {
-            // This will take the first `limit` elements from the iterator
-            // will return all if there are less than `limit` elements
             Self {
                 rx: Box::new(rx.into_iter().take(limit)),
             }
