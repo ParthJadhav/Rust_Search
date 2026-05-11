@@ -1,19 +1,38 @@
 use super::SearchBuilder;
 use ignore::DirEntry;
-use std::{cmp::Ordering, time::SystemTime};
+use std::{
+    cmp::Ordering,
+    panic::{RefUnwindSafe, UnwindSafe},
+    sync::Arc,
+    time::SystemTime,
+};
 
-/// custom filter fn to expose the dir entry directly
+/// Custom filter fn to expose the dir entry directly.
+///
+/// Prefer passing closures directly to [`FilterExt::custom_filter`]. This alias
+/// remains available for callers that want to name a non-capturing filter
+/// function explicitly.
 pub type FilterFn = fn(&DirEntry) -> bool;
 
-#[derive(Clone, Copy)]
+type CustomFilter =
+    Arc<dyn Fn(&DirEntry) -> bool + Send + Sync + UnwindSafe + RefUnwindSafe + 'static>;
+
+#[derive(Clone)]
 pub enum FilterType {
     Created(Ordering, SystemTime),
     Modified(Ordering, SystemTime),
     FileSize(Ordering, u64),
-    Custom(FilterFn),
+    Custom(CustomFilter),
 }
 
 impl FilterType {
+    pub(crate) fn custom<F>(f: F) -> Self
+    where
+        F: Fn(&DirEntry) -> bool + Send + Sync + UnwindSafe + RefUnwindSafe + 'static,
+    {
+        Self::Custom(Arc::new(f))
+    }
+
     pub fn apply(&self, dir: &DirEntry) -> bool {
         if let Ok(m) = dir.metadata() {
             match self {
@@ -91,7 +110,7 @@ pub trait FilterExt {
     fn file_size_equal(self, size: FileSize) -> Self;
     /// files greater than `size_in_bytes`: [usize]
     fn file_size_greater(self, size: FileSize) -> Self;
-    /// custom filter that exposes the [`DirEntry`] directly
+    /// Custom filter that exposes the [`DirEntry`] directly.
     /// ```rust
     /// use rust_search::{SearchBuilder, FilterExt};
     ///
@@ -142,6 +161,6 @@ impl FilterExt for SearchBuilder {
         self.filter(FilterFileSize(Greater, size.into()))
     }
     fn custom_filter(self, f: FilterFn) -> Self {
-        self.filter(Custom(f))
+        self.filter(Custom(Arc::new(f)))
     }
 }

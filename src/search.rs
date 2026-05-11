@@ -1,13 +1,13 @@
 use std::{
     ffi::OsStr,
-    path::Path,
+    path::PathBuf,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
 };
 
-use crate::{filter::FilterType, utils, SearchBuilder};
+use crate::{builder::SearchConfig, utils, SearchBuilder};
 use crossbeam_channel::Sender;
 use ignore::types::TypesBuilder;
 use ignore::{WalkBuilder, WalkState};
@@ -71,28 +71,21 @@ impl Iterator for Search {
 impl Search {
     /// Search for files in a given arguments
     /// ### Arguments
-    /// * `search_location` - The location to search in
-    /// * `search_input` - The search input, defaults to any word
-    /// * `file_ext` - The file extension to search for, defaults to any file extension
-    /// * `depth` - The depth to search to, defaults to no limit
-    /// * `limit` - The limit of results to return, defaults to no limit
-    /// * `strict` - Whether to search for the exact word or not
-    /// * `ignore_case` - Whether to ignore case or not
-    /// * `hidden` - Whether to search hidden files or not
-    /// * `filters` - Vector of filters to search by `DirEntry` data
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        search_location: impl AsRef<Path>,
-        more_locations: Option<Vec<impl AsRef<Path>>>,
-        search_input: Option<&str>,
-        file_ext: Option<&str>,
-        depth: Option<usize>,
-        limit: Option<usize>,
-        strict: bool,
-        ignore_case: bool,
-        with_hidden: bool,
-        filters: Vec<FilterType>,
-    ) -> Self {
+    /// * `config` - The search configuration assembled by [`SearchBuilder`]
+    pub(crate) fn new(config: SearchConfig) -> Self {
+        let SearchConfig {
+            search_location,
+            more_locations,
+            search_input,
+            file_ext,
+            depth,
+            limit,
+            options,
+            excluded_dirs,
+            filters,
+        } = config;
+        let search_input = search_input.as_deref();
+        let file_ext = file_ext.as_deref();
         let mut walker = WalkBuilder::new(search_location);
 
         // Use more threads than CPUs for I/O-bound work: while one thread
@@ -101,8 +94,8 @@ impl Search {
         let thread_count = cpus * 2;
 
         walker
-            .hidden(!with_hidden)
-            .git_ignore(true)
+            .hidden(!options.include_hidden())
+            .git_ignore(options.respect_git_ignore())
             .max_depth(depth)
             .threads(thread_count);
 
@@ -121,33 +114,18 @@ impl Search {
         }
 
         // Determine the matcher strategy based on search parameters.
-        let matcher = if search_input.is_none() && !strict && !ignore_case {
-            if file_ext.is_some() && types_filter_active {
-                // Types pre-filter handles extension matching; no additional check needed.
-                Matcher::AcceptAll
-            } else if let Some(ext) = file_ext {
-                // Fallback: simple extension comparison.
-                Matcher::ExtOnly(ext.to_owned())
-            } else {
-                Matcher::Regex(utils::build_regex_search_input(
-                    search_input,
-                    file_ext,
-                    strict,
-                    ignore_case,
-                ))
-            }
-        } else {
-            Matcher::Regex(utils::build_regex_search_input(
-                search_input,
-                file_ext,
-                strict,
-                ignore_case,
-            ))
-        };
+        let matcher = build_matcher(
+            search_input,
+            file_ext,
+            options.strict(),
+            options.ignore_case(),
+            types_filter_active,
+        );
 
-        // Only apply filter_entry if there are filters to check
-        if !filters.is_empty() {
-            walker.filter_entry(move |dir| filters.iter().all(|f| f.apply(dir)));
+        // Prune excluded directories at the walker level so their children are
+        // never visited.
+        if !excluded_dirs.is_empty() {
+            walker.filter_entry(move |entry| !is_excluded_dir(entry, &excluded_dirs));
         }
 
         if let Some(locations) = more_locations {
@@ -158,11 +136,13 @@ impl Search {
 
         let (tx, rx) = crossbeam_channel::unbounded::<String>();
         let matcher = Arc::new(matcher);
+        let filters = Arc::new(filters);
         let counter = Arc::new(AtomicUsize::new(0));
 
         walker.build_parallel().run(|| {
             let tx: Sender<String> = tx.clone();
             let matcher = Arc::clone(&matcher);
+            let filters = Arc::clone(&filters);
             let counter = Arc::clone(&counter);
 
             Box::new(move |path_entry| {
@@ -182,6 +162,10 @@ impl Search {
                         }
                     };
                     if is_match {
+                        if !filters.iter().all(|f| f.apply(&entry)) {
+                            return WalkState::Continue;
+                        }
+
                         if limit.is_none_or(|l| counter.fetch_add(1, Ordering::Relaxed) < l) {
                             // Use into_path() for zero-copy PathBuf, then try zero-copy
                             // String conversion (succeeds for valid UTF-8 paths).
@@ -214,6 +198,56 @@ impl Search {
             }
         }
     }
+}
+
+fn build_matcher(
+    search_input: Option<&str>,
+    file_ext: Option<&str>,
+    strict: bool,
+    ignore_case: bool,
+    types_filter_active: bool,
+) -> Matcher {
+    if search_input.is_none() && !strict && !ignore_case {
+        if file_ext.is_some() && types_filter_active {
+            // Types pre-filter handles extension matching; no additional check needed.
+            Matcher::AcceptAll
+        } else if let Some(ext) = file_ext {
+            // Fallback: simple extension comparison.
+            Matcher::ExtOnly(ext.to_owned())
+        } else {
+            Matcher::Regex(utils::build_regex_search_input(
+                search_input,
+                file_ext,
+                strict,
+                ignore_case,
+            ))
+        }
+    } else {
+        Matcher::Regex(utils::build_regex_search_input(
+            search_input,
+            file_ext,
+            strict,
+            ignore_case,
+        ))
+    }
+}
+
+fn is_excluded_dir(entry: &ignore::DirEntry, excluded_dirs: &[PathBuf]) -> bool {
+    if !entry.file_type().is_some_and(|ft| ft.is_dir()) {
+        return false;
+    }
+
+    excluded_dirs.iter().any(|excluded| {
+        if excluded.as_os_str().is_empty() {
+            return false;
+        }
+
+        if excluded.components().count() == 1 {
+            entry.file_name() == excluded.as_os_str()
+        } else {
+            entry.path().ends_with(excluded)
+        }
+    })
 }
 
 impl Default for Search {

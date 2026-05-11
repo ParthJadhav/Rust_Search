@@ -1,5 +1,5 @@
 use rust_search::SearchBuilder;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -7,6 +7,17 @@ fn fixtures_dir() -> PathBuf {
 
 fn fixtures_path() -> String {
     fixtures_dir().display().to_string()
+}
+
+fn temp_fixture_dir(name: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!(
+        "rust_search_{name}_{}_{}",
+        std::process::id(),
+        std::thread::current().name().unwrap_or("test")
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).expect("failed to create temp fixture dir");
+    dir
 }
 
 #[test]
@@ -151,6 +162,62 @@ fn search_hidden_includes_hidden_files() {
     assert!(
         !default_has_hidden,
         "Default search should not include hidden files"
+    );
+}
+
+#[test]
+fn search_can_include_gitignored_files() {
+    let dir = temp_fixture_dir("gitignore");
+    fs::create_dir(dir.join(".git")).expect("failed to create temp .git dir");
+    fs::write(dir.join(".gitignore"), "ignored.log\n").expect("failed to write .gitignore");
+    fs::write(dir.join("visible.log"), "visible").expect("failed to write visible fixture");
+    fs::write(dir.join("ignored.log"), "ignored").expect("failed to write ignored fixture");
+    let path = dir.display().to_string();
+
+    let default_results: Vec<String> = SearchBuilder::default().location(&path).build().collect();
+    assert!(
+        !default_results.iter().any(|r| r.ends_with("ignored.log")),
+        "Default search should respect .gitignore: {:?}",
+        default_results
+    );
+
+    let ignored_results: Vec<String> = SearchBuilder::default()
+        .location(&path)
+        .git_ignore(false)
+        .build()
+        .collect();
+    assert!(
+        ignored_results.iter().any(|r| r.ends_with("ignored.log")),
+        "git_ignore(false) should include ignored files: {:?}",
+        ignored_results
+    );
+
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn search_can_exclude_directory_names() {
+    let with_vendor: Vec<String> = SearchBuilder::default()
+        .location(fixtures_path())
+        .ext("rs")
+        .build()
+        .collect();
+    assert!(
+        with_vendor.iter().any(|r| r.contains("vendor_pkg")),
+        "Fixture sanity check should include vendor_pkg before exclusion: {:?}",
+        with_vendor
+    );
+
+    let without_vendor: Vec<String> = SearchBuilder::default()
+        .location(fixtures_path())
+        .exclude_dir("vendor_pkg")
+        .ext("rs")
+        .build()
+        .collect();
+    assert!(
+        !without_vendor.iter().any(|r| r.contains("vendor_pkg")),
+        "exclude_dir should prune matching directories: {:?}",
+        without_vendor
     );
 }
 

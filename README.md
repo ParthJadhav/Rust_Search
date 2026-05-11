@@ -17,11 +17,11 @@ Blazingly fast file search crate built in Rust 🔥
 
 Please report any problems you encounter when using rust search here: [Issues](https://github.com/ParthJadhav/rust_search/issues)
 
-Add `rust_search = "2.0.0"` in Cargo.toml.
+Add `rust_search = "2.2.0"` in Cargo.toml.
 
 ```toml
 [dependencies]
-rust_search = "2.0.0"
+rust_search = "2.2.0"
 ```
 
 ## Examples
@@ -97,6 +97,31 @@ let files: Vec<String> = SearchBuilder::default()
     .build()
     .collect();
 ```
+
+- To include files ignored by `.gitignore`, use:
+
+```rust
+use rust_search::SearchBuilder;
+
+let files: Vec<String> = SearchBuilder::default()
+    .location("/path/to/directory")
+    .git_ignore(false)
+    .build()
+    .collect();
+```
+
+- To skip expensive directories while walking, use:
+
+```rust
+use rust_search::SearchBuilder;
+
+let files: Vec<String> = SearchBuilder::default()
+    .location("/path/to/directory")
+    .exclude_dirs(["node_modules", "target"])
+    .build()
+    .collect();
+```
+
 To filter files by `date_created`, `date_modified`, `file_size` and/or `custom_filter`, use:
 
 ```rust
@@ -116,6 +141,19 @@ let search: Vec<String> = SearchBuilder::default()
 		.collect();
 ```
 
+Custom filters can capture values from their environment:
+
+```rust
+use rust_search::{FilterExt, SearchBuilder};
+
+let suffix = ".rs".to_string();
+let search: Vec<String> = SearchBuilder::default()
+    .location("~/path/to/directory")
+    .custom_filter(move |dir| dir.path().to_string_lossy().ends_with(&suffix))
+    .build()
+    .collect();
+```
+
 👉 For more examples, please refer to the [Documentation](https://docs.rs/rust_search/latest/rust_search/)
 
 ## ⚙️ Benchmarks
@@ -129,7 +167,7 @@ Benchmarks files are available in the [benchmarks](https://drive.google.com/driv
 
 The benchmark was done on a directories containing 300K files.
 
-| Command / Library | Mean [s] | Min [s] | Max [s] | Relative |
+| Command / Library | Mean \[s] | Min \[s] | Max \[s] | Relative |
 |:---|---:|---:|---:|---:|
 | `rust_search` | 1.317 ± 0.002 | 1.314 | 1.320 | 1.00 |
 | `glob` | 22.728 ± 0.023 | 22.690 | 22.746 | 17.25 ± 0.03 |
@@ -140,7 +178,7 @@ The benchmark was done on a directories containing 300K files.
 
 The benchmark was done on a directories containing 45K files.
 
-| Command / Library | Mean [ms] | Min [ms] | Max [ms] | Relative |
+| Command / Library | Mean \[ms] | Min \[ms] | Max \[ms] | Relative |
 |:---|---:|---:|---:|---:|
 | `rust_search` | 680.5 ± 2.1 | 678.3 | 683.6 | 1.00 |
 | `fd -e .js` | 738.7 ± 10.2 | 720.8 | 746.7 | 1.09 ± 0.02 |

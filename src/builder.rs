@@ -1,7 +1,75 @@
-use std::path::{Path, PathBuf};
+use std::{
+    panic::{RefUnwindSafe, UnwindSafe},
+    path::{Path, PathBuf},
+};
 
 use crate::filter::FilterType;
 use crate::{utils::replace_tilde_with_home_dir, Search};
+use ignore::DirEntry;
+
+/// Search behavior toggles collected away from the public builder fields.
+#[derive(Clone, Copy)]
+pub struct SearchOptions {
+    matching: MatchMode,
+    case_matching: CaseMatching,
+    hidden: Hidden,
+    git_ignore: GitIgnore,
+}
+
+#[derive(Clone, Copy)]
+enum MatchMode {
+    Fuzzy,
+    Strict,
+}
+
+#[derive(Clone, Copy)]
+enum CaseMatching {
+    CaseSensitive,
+    IgnoreCase,
+}
+
+#[derive(Clone, Copy)]
+enum Hidden {
+    Exclude,
+    Include,
+}
+
+#[derive(Clone, Copy)]
+enum GitIgnore {
+    Respect,
+    Ignore,
+}
+
+impl SearchOptions {
+    pub const fn strict(self) -> bool {
+        matches!(self.matching, MatchMode::Strict)
+    }
+
+    pub const fn ignore_case(self) -> bool {
+        matches!(self.case_matching, CaseMatching::IgnoreCase)
+    }
+
+    pub const fn include_hidden(self) -> bool {
+        matches!(self.hidden, Hidden::Include)
+    }
+
+    pub const fn respect_git_ignore(self) -> bool {
+        matches!(self.git_ignore, GitIgnore::Respect)
+    }
+}
+
+/// Internal search configuration assembled by [`SearchBuilder`].
+pub struct SearchConfig {
+    pub search_location: PathBuf,
+    pub more_locations: Option<Vec<PathBuf>>,
+    pub search_input: Option<String>,
+    pub file_ext: Option<String>,
+    pub depth: Option<usize>,
+    pub limit: Option<usize>,
+    pub options: SearchOptions,
+    pub excluded_dirs: Vec<PathBuf>,
+    pub filters: Vec<FilterType>,
+}
 
 /// Builder for a [`Search`] instance, allowing for more complex searches.
 pub struct SearchBuilder {
@@ -17,12 +85,10 @@ pub struct SearchBuilder {
     depth: Option<usize>,
     /// The limit of results to return, defaults to no limit.
     limit: Option<usize>,
-    /// When set to true, Searches for exact match, defaults to false.
-    strict: bool,
-    /// Set search option to be case insensitive, defaults to false.
-    ignore_case: bool,
-    /// Search for hidden files, defaults to false.
-    hidden: bool,
+    /// Behavior toggles for the search.
+    options: SearchOptions,
+    /// Directory names or paths to exclude from traversal.
+    excluded_dirs: Vec<PathBuf>,
     /// Filters Vector, defaults to empty vec
     filters: Vec<FilterType>,
 }
@@ -31,18 +97,17 @@ impl SearchBuilder {
     /// Build a new [`Search`] instance.
     #[allow(deprecated)]
     pub fn build(&self) -> Search {
-        Search::new(
-            &self.search_location,
-            self.more_locations.clone(),
-            self.search_input.as_deref(),
-            self.file_ext.as_deref(),
-            self.depth,
-            self.limit,
-            self.strict,
-            self.ignore_case,
-            self.hidden,
-            self.filters.clone(),
-        )
+        Search::new(SearchConfig {
+            search_location: self.search_location.clone(),
+            more_locations: self.more_locations.clone(),
+            search_input: self.search_input.clone(),
+            file_ext: self.file_ext.clone(),
+            depth: self.depth,
+            limit: self.limit,
+            options: self.options,
+            excluded_dirs: self.excluded_dirs.clone(),
+            filters: self.filters.clone(),
+        })
     }
 
     /// Set the search location to search in.
@@ -128,6 +193,31 @@ impl SearchBuilder {
         self
     }
 
+    /// Add a custom result filter that exposes the [`DirEntry`] directly.
+    ///
+    /// Capturing closures are supported. Because searches run in parallel, the
+    /// closure must be thread-safe and unwind-safe.
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let extension = "rs";
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .custom_filter(move |dir| {
+    ///         dir.path()
+    ///             .extension()
+    ///             .is_some_and(|ext| ext == std::ffi::OsStr::new(extension))
+    ///     })
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn custom_filter<F>(self, f: F) -> Self
+    where
+        F: Fn(&DirEntry) -> bool + Send + Sync + UnwindSafe + RefUnwindSafe + 'static,
+    {
+        self.filter(FilterType::custom(f))
+    }
+
     /// Set the depth to search to, meaning how many subdirectories to search in.
     /// ### Arguments
     /// * `depth` - The depth to search to.
@@ -176,7 +266,7 @@ impl SearchBuilder {
     ///     .collect();
     /// ```
     pub const fn strict(mut self) -> Self {
-        self.strict = true;
+        self.options.matching = MatchMode::Strict;
         self
     }
 
@@ -194,7 +284,7 @@ impl SearchBuilder {
     ///     .collect();
     /// ```
     pub const fn ignore_case(mut self) -> Self {
-        self.ignore_case = true;
+        self.options.case_matching = CaseMatching::IgnoreCase;
         self
     }
 
@@ -209,7 +299,69 @@ impl SearchBuilder {
     ///     .collect();
     /// ```
     pub const fn hidden(mut self) -> Self {
-        self.hidden = true;
+        self.options.hidden = Hidden::Include;
+        self
+    }
+
+    /// Choose whether to respect `.gitignore` files.
+    ///
+    /// This is enabled by default. Pass `false` to include files ignored by
+    /// `.gitignore`.
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .git_ignore(false)
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub const fn git_ignore(mut self, enabled: bool) -> Self {
+        self.options.git_ignore = if enabled {
+            GitIgnore::Respect
+        } else {
+            GitIgnore::Ignore
+        };
+        self
+    }
+
+    /// Exclude a directory name or path from traversal.
+    ///
+    /// Passing `"node_modules"` excludes every directory with that name.
+    /// Passing a path such as `"frontend/node_modules"` excludes matching
+    /// path suffixes.
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .exclude_dir("node_modules")
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn exclude_dir(mut self, dir: impl AsRef<Path>) -> Self {
+        self.excluded_dirs.push(dir.as_ref().to_path_buf());
+        self
+    }
+
+    /// Exclude directory names or paths from traversal.
+    ///
+    /// ### Examples
+    /// ```rust
+    /// use rust_search::SearchBuilder;
+    ///
+    /// let search: Vec<String> = SearchBuilder::default()
+    ///     .exclude_dirs(["node_modules", "target"])
+    ///     .build()
+    ///     .collect();
+    /// ```
+    pub fn exclude_dirs<I, P>(mut self, dirs: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: AsRef<Path>,
+    {
+        self.excluded_dirs
+            .extend(dirs.into_iter().map(|dir| dir.as_ref().to_path_buf()));
         self
     }
 
@@ -248,9 +400,13 @@ impl Default for SearchBuilder {
             file_ext: None,
             depth: None,
             limit: None,
-            strict: false,
-            ignore_case: false,
-            hidden: false,
+            options: SearchOptions {
+                matching: MatchMode::Fuzzy,
+                case_matching: CaseMatching::CaseSensitive,
+                hidden: Hidden::Exclude,
+                git_ignore: GitIgnore::Respect,
+            },
+            excluded_dirs: Vec::new(),
             filters: vec![],
         }
     }

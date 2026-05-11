@@ -83,6 +83,44 @@ fn custom_filter_works() {
 }
 
 #[test]
+fn custom_filter_can_capture_environment() {
+    let expected_file = String::from("nested.rs");
+    let results: Vec<String> = SearchBuilder::default()
+        .location(fixtures_path())
+        .custom_filter(move |dir| {
+            dir.path()
+                .file_name()
+                .is_some_and(|name| name == std::ffi::OsStr::new(expected_file.as_str()))
+        })
+        .build()
+        .collect();
+
+    assert_eq!(
+        results.len(),
+        1,
+        "Capturing custom filter should find exactly nested.rs: {:?}",
+        results
+    );
+    assert!(results[0].ends_with("nested.rs"));
+}
+
+#[test]
+fn custom_filter_does_not_prune_directories() {
+    let results: Vec<String> = SearchBuilder::default()
+        .location(fixtures_path())
+        .search_input("deep_file")
+        .custom_filter(|dir| dir.metadata().map(|m| m.is_file()).unwrap_or(false))
+        .build()
+        .collect();
+
+    assert!(
+        results.iter().any(|r| r.ends_with("deep_file.rs")),
+        "Custom result filters should not prevent walking into directories: {:?}",
+        results
+    );
+}
+
+#[test]
 fn created_after_epoch_finds_files() {
     // All files were created after UNIX epoch
     let epoch = SystemTime::UNIX_EPOCH;
