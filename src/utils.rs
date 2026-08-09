@@ -1,35 +1,8 @@
 use rayon::prelude::*;
-use regex::Regex;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
 use strsim::jaro_winkler;
-
-const FUZZY_SEARCH: &str = r".*";
-
-pub fn build_regex_search_input(
-    search_input: Option<&str>,
-    file_ext: Option<&str>,
-    strict: bool,
-    ignore_case: bool,
-) -> Regex {
-    let file_type = file_ext.unwrap_or("*");
-    let search_input = search_input.unwrap_or(r"\w+");
-
-    let mut formatted_search_input = if strict {
-        format!(r"{search_input}\.{file_type}$")
-    } else {
-        format!(r"{search_input}{FUZZY_SEARCH}\.{file_type}$")
-    };
-
-    if ignore_case {
-        formatted_search_input = set_case_insensitive(&formatted_search_input);
-    }
-    Regex::new(&formatted_search_input).unwrap()
-}
-
-fn set_case_insensitive(formatted_search_input: &str) -> String {
-    "(?i)".to_owned() + formatted_search_input
-}
 
 /// Replace the tilde with the home directory, if it exists
 /// ### Arguments
@@ -45,11 +18,10 @@ pub fn replace_tilde_with_home_dir(path: impl AsRef<Path>) -> PathBuf {
     path.to_path_buf()
 }
 
-fn file_name_from_path(path: &str) -> &str {
-    Path::new(path)
-        .file_name()
-        .and_then(|f| f.to_str())
-        .unwrap_or(path)
+fn file_name_from_path(path: &Path) -> Cow<'_, str> {
+    path.file_name()
+        .unwrap_or(path.as_os_str())
+        .to_string_lossy()
 }
 
 /// This function can be used to sort the given vector on basis of similarity between the input & the vector
@@ -81,6 +53,20 @@ fn file_name_from_path(path: &str) -> &str {
 /// search **with** similarity sort
 /// `["fly.txt", "flyer.txt", "afly.txt", "bfly.txt",]`
 pub fn similarity_sort(vector: &mut [String], input: &str) {
+    similarity_sort_impl(vector, input);
+}
+
+/// Sort paths by their filename similarity to `input`.
+///
+/// This is the lossless [`PathBuf`] counterpart to [`similarity_sort`].
+pub fn similarity_sort_paths(vector: &mut [PathBuf], input: &str) {
+    similarity_sort_impl(vector, input);
+}
+
+fn similarity_sort_impl<T>(vector: &mut [T], input: &str)
+where
+    T: AsRef<Path> + Sync,
+{
     const PARALLEL_SORT_THRESHOLD: usize = 5000;
     let input = input.to_lowercase();
     // Schwartzian transform: precompute all scores, then sort by score.
@@ -90,7 +76,7 @@ pub fn similarity_sort(vector: &mut [String], input: &str) {
             .par_iter()
             .enumerate()
             .map(|(i, path)| {
-                let name = file_name_from_path(path).to_lowercase();
+                let name = file_name_from_path(path.as_ref()).to_lowercase();
                 (i, jaro_winkler(&name, &input))
             })
             .collect()
@@ -99,7 +85,7 @@ pub fn similarity_sort(vector: &mut [String], input: &str) {
             .iter()
             .enumerate()
             .map(|(i, path)| {
-                let name = file_name_from_path(path).to_lowercase();
+                let name = file_name_from_path(path.as_ref()).to_lowercase();
                 (i, jaro_winkler(&name, &input))
             })
             .collect()
@@ -126,41 +112,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn build_regex_fuzzy_no_ext() {
-        let re = build_regex_search_input(Some("hello"), None, false, false);
-        assert!(re.is_match("hello.rs"));
-        assert!(re.is_match("hello_world.txt"));
-    }
-
-    #[test]
-    fn build_regex_strict_with_ext() {
-        let re = build_regex_search_input(Some("hello"), Some("rs"), true, false);
-        assert!(re.is_match("hello.rs"));
-        assert!(!re.is_match("hello_world.rs"));
-    }
-
-    #[test]
-    fn build_regex_ignore_case() {
-        let re = build_regex_search_input(Some("Hello"), None, false, true);
-        assert!(re.is_match("hello.rs"));
-        assert!(re.is_match("HELLO.txt"));
-    }
-
-    #[test]
-    fn build_regex_defaults() {
-        let re = build_regex_search_input(None, None, false, false);
-        // Should match any filename with an extension
-        assert!(re.is_match("anything.txt"));
-    }
-
-    #[test]
     fn file_name_from_path_normal() {
-        assert_eq!(file_name_from_path("/some/path/file.txt"), "file.txt");
+        assert_eq!(
+            file_name_from_path(Path::new("/some/path/file.txt")),
+            "file.txt"
+        );
     }
 
     #[test]
     fn file_name_from_path_no_extension() {
-        assert_eq!(file_name_from_path("/some/path/file"), "file");
+        assert_eq!(file_name_from_path(Path::new("/some/path/file")), "file");
     }
 
     #[test]

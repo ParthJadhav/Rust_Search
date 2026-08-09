@@ -1,4 +1,5 @@
-use rust_search::similarity_sort;
+use rust_search::{similarity_sort, similarity_sort_paths};
+use std::path::PathBuf;
 
 #[test]
 fn similarity_sort_basic() {
@@ -34,4 +35,11 @@ fn similarity_sort_single_element() {
     let mut v = vec!["only.txt".to_string()];
     similarity_sort(&mut v, "only");
     assert_eq!(v[0], "only.txt");
+}
+
+#[test]
+fn similarity_sort_paths_supports_pathbufs() {
+    let mut values = vec![PathBuf::from("afly.txt"), PathBuf::from("fly.txt")];
+    similarity_sort_paths(&mut values, "fly");
+    assert_eq!(values[0], PathBuf::from("fly.txt"));
 }

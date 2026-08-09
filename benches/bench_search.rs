@@ -4,8 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-const WARMUP_ITERS: usize = 1;
-const BENCH_ITERS: usize = 3;
+const WARMUP_ITERS: usize = 3;
+const BENCH_ITERS: usize = 10;
 
 fn median(times: &mut [Duration]) -> Duration {
     times.sort();
@@ -14,9 +14,8 @@ fn median(times: &mut [Duration]) -> Duration {
 
 /// Create a controlled test directory with many files for benchmarking.
 fn create_test_dir(num_dirs: usize, files_per_dir: usize) -> PathBuf {
-    let dir = std::env::temp_dir().join("rust_search_bench");
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(&dir).unwrap();
+    let dir = std::env::temp_dir().join(format!("rust_search_bench_{}", std::process::id()));
+    fs::create_dir(&dir).expect("benchmark directory already exists");
 
     let extensions = [
         "rs", "txt", "md", "json", "toml", "yaml", "py", "js", "ts", "css",
@@ -88,6 +87,105 @@ fn run_sort_bench(
     (count, med)
 }
 
+fn run_first_result_bench<F: Fn() -> Option<String>>(
+    label: &str,
+    warmup: usize,
+    iters: usize,
+    f: F,
+) -> Duration {
+    for _ in 0..warmup {
+        assert!(f().is_some());
+    }
+
+    let mut times = Vec::with_capacity(iters);
+    for _ in 0..iters {
+        let start = Instant::now();
+        assert!(f().is_some());
+        times.push(start.elapsed());
+    }
+
+    let med = median(&mut times);
+    eprintln!("{label:<28} first result,   median {med:>12.3?}");
+    med
+}
+
+fn run_controlled_benchmarks() {
+    eprintln!("=== Controlled (100,000 files) ===\n");
+    let dir = create_test_dir(500, 200);
+
+    run_bench("ctrl/ext_only (.rs)", WARMUP_ITERS, BENCH_ITERS, || {
+        SearchBuilder::default()
+            .location(&dir)
+            .ext("rs")
+            .build()
+            .collect()
+    });
+    run_bench(
+        "ctrl/multi_ext (.rs,.txt)",
+        WARMUP_ITERS,
+        BENCH_ITERS,
+        || {
+            SearchBuilder::default()
+                .location(&dir)
+                .extensions(["rs", "txt"])
+                .build()
+                .collect()
+        },
+    );
+    run_bench(
+        "ctrl/name+ext (file_00,rs)",
+        WARMUP_ITERS,
+        BENCH_ITERS,
+        || {
+            SearchBuilder::default()
+                .location(&dir)
+                .search_input("file_00")
+                .ext("rs")
+                .build()
+                .collect()
+        },
+    );
+    run_bench(
+        "ctrl/ext+limit (.rs,100)",
+        WARMUP_ITERS,
+        BENCH_ITERS,
+        || {
+            SearchBuilder::default()
+                .location(&dir)
+                .ext("rs")
+                .limit(100)
+                .build()
+                .collect()
+        },
+    );
+    let ctrl_base: Vec<String> = SearchBuilder::default()
+        .location(&dir)
+        .ext("rs")
+        .build()
+        .collect();
+    run_sort_bench(
+        "ctrl/sort",
+        &ctrl_base,
+        "file_0042",
+        WARMUP_ITERS,
+        BENCH_ITERS,
+    );
+    run_first_result_bench(
+        "ctrl/time_to_first (.rs)",
+        WARMUP_ITERS,
+        BENCH_ITERS,
+        || {
+            SearchBuilder::default()
+                .location(&dir)
+                .ext("rs")
+                .build()
+                .next()
+        },
+    );
+
+    fs::remove_dir_all(&dir).expect("failed to clean up benchmark directory");
+}
+
 fn main() {
     let arg = std::env::args().nth(1).unwrap_or_default();
     match arg.as_str() {
@@ -121,6 +219,7 @@ fn main() {
                 .collect();
             run_sort_bench("sort", &base, "main", WARMUP_ITERS, BENCH_ITERS);
         }
+        "controlled" => run_controlled_benchmarks(),
         "all" => {
             let home = dirs::home_dir().unwrap();
 
@@ -154,45 +253,8 @@ fn main() {
                 .collect();
             run_sort_bench("home/sort", &base, "main", WARMUP_ITERS, BENCH_ITERS);
 
-            // Controlled benchmarks
-            eprintln!("\n=== Controlled (100,000 files) ===\n");
-            let dir = create_test_dir(500, 200);
-
-            run_bench("ctrl/ext_only (.rs)", WARMUP_ITERS, BENCH_ITERS, || {
-                SearchBuilder::default()
-                    .location(&dir)
-                    .ext("rs")
-                    .build()
-                    .collect()
-            });
-            run_bench(
-                "ctrl/ext+input (file_00.rs)",
-                WARMUP_ITERS,
-                BENCH_ITERS,
-                || {
-                    SearchBuilder::default()
-                        .location(&dir)
-                        .search_input("file_00")
-                        .ext("rs")
-                        .build()
-                        .collect()
-                },
-            );
-
-            let ctrl_base: Vec<String> = SearchBuilder::default()
-                .location(&dir)
-                .ext("rs")
-                .build()
-                .collect();
-            run_sort_bench(
-                "ctrl/sort",
-                &ctrl_base,
-                "file_0042",
-                WARMUP_ITERS,
-                BENCH_ITERS,
-            );
-
-            let _ = fs::remove_dir_all(&dir);
+            eprintln!();
+            run_controlled_benchmarks();
 
             eprintln!("\n=== Done ===");
         }
@@ -228,9 +290,9 @@ fn main() {
                     .collect()
             });
 
-            // 4. Search with regex pattern + extension
+            // 4. Search with a filename query and extension
             run_bench(
-                "system/regex+ext (main*.rs)",
+                "system/name+ext (main,rs)",
                 WARMUP_ITERS,
                 BENCH_ITERS,
                 || {
@@ -324,7 +386,7 @@ fn main() {
             eprintln!("\n=== Done ===");
         }
         _ => {
-            eprintln!("Usage: bench_search [search|limit|sort|all|system]");
+            eprintln!("Usage: bench_search [search|limit|sort|controlled|all|system]");
         }
     }
 }
