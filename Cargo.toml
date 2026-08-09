@@ -3,6 +3,7 @@ name = "rust_search"
 version = "2.2.0"
 description = "Blazingly fast file search library built in Rust"
 edition = "2021"
+rust-version = "1.88"
 authors = ["Parth Jadhav <jadhavparth99@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -12,26 +13,27 @@ categories = ["filesystem", "algorithms"]
 include = [
     "/.github/**",
     "/benches/**",
+    "/benchmarks/**",
+    "/examples/**",
     "/src/**",
     "/tests/**",
     "/Cargo.toml",
+    "/BENCHMARKS.md",
+    "/CHANGELOG.md",
     "/LICENSE-MIT",
     "/README.md",
+    "/ROADMAP.md",
     "/learnings.md",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-regex = "1"
 ignore = "0.4"
-dirs = "4.0.0"
-strsim = "0.10.0"
+dirs = "6"
+strsim = "0.11"
 crossbeam-channel = "0.5.15"
 rayon = "1.11.0"
-
-[dev-dependencies]
-dirs = "4.0.0"
 
 [[bench]]
 name = "bench_search"
