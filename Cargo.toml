@@ -6,6 +6,7 @@ edition = "2021"
 authors = ["Parth Jadhav <jadhavparth99@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://www.parthjadhav.com/products/rust-search"
 repository = "https://github.com/ParthJadhav/rust_search"
 keywords = ["search", "files", "directories", "library"]
 categories = ["filesystem", "algorithms"]
