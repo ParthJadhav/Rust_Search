@@ -2,6 +2,7 @@ use super::SearchBuilder;
 use ignore::DirEntry;
 use std::{
     cmp::Ordering,
+    fs::Metadata,
     panic::{RefUnwindSafe, UnwindSafe},
     sync::Arc,
     time::SystemTime,
@@ -33,27 +34,37 @@ impl FilterType {
         Self::Custom(Arc::new(f))
     }
 
-    pub fn apply(&self, dir: &DirEntry) -> bool {
-        if let Ok(m) = dir.metadata() {
-            match self {
-                Self::Created(cmp, time) => {
-                    if let Ok(created) = m.created() {
-                        return created.cmp(time) == *cmp;
-                    }
-                }
-                Self::Modified(cmp, time) => {
-                    if let Ok(modified) = m.modified() {
-                        return modified.cmp(time) == *cmp;
-                    }
-                }
-                Self::FileSize(cmp, size_in_bytes) => {
-                    return m.len().cmp(size_in_bytes) == *cmp;
-                }
-                Self::Custom(f) => return f(dir),
-            }
-        }
-        false
+    const fn requires_metadata(&self) -> bool {
+        !matches!(self, Self::Custom(_))
     }
+
+    fn apply(&self, dir: &DirEntry, metadata: Option<&Metadata>) -> bool {
+        match self {
+            Self::Created(cmp, time) => metadata
+                .and_then(|metadata| metadata.created().ok())
+                .is_some_and(|created| created.cmp(time) == *cmp),
+            Self::Modified(cmp, time) => metadata
+                .and_then(|metadata| metadata.modified().ok())
+                .is_some_and(|modified| modified.cmp(time) == *cmp),
+            Self::FileSize(cmp, size_in_bytes) => {
+                metadata.is_some_and(|metadata| metadata.len().cmp(size_in_bytes) == *cmp)
+            }
+            Self::Custom(filter) => filter(dir),
+        }
+    }
+}
+
+/// Apply all result filters while reusing a single metadata lookup.
+pub fn matches_all(dir: &DirEntry, filters: &[FilterType]) -> bool {
+    let metadata = filters
+        .iter()
+        .any(FilterType::requires_metadata)
+        .then(|| dir.metadata().ok())
+        .flatten();
+
+    filters
+        .iter()
+        .all(|filter| filter.apply(dir, metadata.as_ref()))
 }
 
 /// enum to easily convert between `byte_sizes`
@@ -104,18 +115,18 @@ pub trait FilterExt {
     fn modified_at(self, t: SystemTime) -> Self;
     /// files modified after `t`: [`SystemTime`]
     fn modified_after(self, t: SystemTime) -> Self;
-    /// files smaller than `size_in_bytes`: [usize]
+    /// Files smaller than the supplied [`FileSize`].
     fn file_size_smaller(self, size: FileSize) -> Self;
-    /// files equal to `size_in_bytes`: [usize]
+    /// Files equal to the supplied [`FileSize`].
     fn file_size_equal(self, size: FileSize) -> Self;
-    /// files greater than `size_in_bytes`: [usize]
+    /// Files greater than the supplied [`FileSize`].
     fn file_size_greater(self, size: FileSize) -> Self;
     /// Custom filter that exposes the [`DirEntry`] directly.
     /// ```rust
     /// use rust_search::{SearchBuilder, FilterExt};
     ///
     /// let search: Vec<String> = SearchBuilder::default()
-    ///     .custom_filter(|dir| dir.metadata().unwrap().is_file())
+    ///     .custom_filter(|dir| dir.metadata().is_ok_and(|metadata| metadata.is_file()))
     ///     .build()
     ///     .collect();
     /// ```

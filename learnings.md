@@ -1,5 +1,10 @@
 # Performance Optimization Learnings
 
+> Historical note: this document records the optimization work that landed in
+> commit `13fb0f2`. It is preserved as an engineering log, not as the current
+> benchmark source of truth. See [`BENCHMARKS.md`](BENCHMARKS.md) for the
+> reproducible suite and latest measurements.
+
 ## Summary
 
 Achieved significant performance improvements across all benchmarks through 6 iterative

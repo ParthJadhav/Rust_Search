@@ -72,6 +72,20 @@ fn file_size_smaller_filter() {
 }
 
 #[test]
+fn max_file_size_skips_oversized_files_during_walk() {
+    let results: Vec<String> = SearchBuilder::default()
+        .location(fixtures_path())
+        .max_file_size(FileSize::Byte(0))
+        .build()
+        .collect();
+
+    assert!(
+        results.is_empty(),
+        "non-empty fixtures should be skipped: {results:?}"
+    );
+}
+
+#[test]
 fn custom_filter_works() {
     // Filter to only include files (not directories)
     let results: Vec<String> = SearchBuilder::default()

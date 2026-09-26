@@ -8,7 +8,28 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  msrv:
+    name: Minimum Rust 1.88
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install minimum Rust toolchain
+        run: rustup toolchain install 1.88.0 --profile minimal
+
+      - name: Check all targets
+        run: cargo +1.88.0 check --all-targets
+
   build-test:
     strategy:
       fail-fast: false
@@ -38,10 +59,13 @@ jobs:
         run: rustup toolchain install stable --target ${{ matrix.target }} --profile minimal
 
       - name: Build
-        run: cargo build --verbose --target ${{ matrix.target }}
+        run: cargo build --verbose --all-targets --target ${{ matrix.target }}
 
       - name: Run tests
-        run: cargo test --verbose --target ${{ matrix.target }}
+        run: cargo test --verbose --all-targets --target ${{ matrix.target }}
+
+      - name: Run documentation tests
+        run: cargo test --verbose --doc --target ${{ matrix.target }}
 
   lint:
     name: Lint & Format
@@ -63,4 +87,12 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps
+
+      - name: Check package contents
+        run: cargo package --no-verify

@@ -17,10 +17,10 @@ mod filter;
 mod search;
 mod utils;
 
-pub use builder::SearchBuilder;
+pub use builder::{SearchBuilder, SearchTarget};
 pub use filter::{FileSize, FilterExt, FilterFn};
 
 // export this in order to use it with custom filter functions
 pub use ignore::DirEntry;
-pub use search::Search;
-pub use utils::similarity_sort;
+pub use search::{Search, SearchError, SearchPaths, SearchResults};
+pub use utils::{similarity_sort, similarity_sort_paths};
